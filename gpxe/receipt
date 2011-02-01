@@ -1,0 +1,63 @@
+# SliTaz package receipt.
+
+PACKAGE="gpxe"
+VERSION="0.9.3"
+CATEGORY="tiny-slitaz"
+SHORT_DESC="Forward PXE to Slitaz Web Boot"
+MAINTAINER="pascal.bellard@slitaz.org"
+WEB_SITE="http://boot.slitaz.org/"
+DEPENDS="base-tiny udhcpd-config"
+CONFIG_FILES="/etc/rcS.conf /etc/udhcpd.conf /etc/inetd.conf"
+
+# Rules to configure and make the package.
+compile_rules()
+{
+	while read pkg file ; do
+		if [ ! -s $pkg*/fs$file ]; then
+			tazpkg get $pkg
+			tazpkg extract $pkg*.tazpkg
+		fi
+		mkdir -p fs$(dirname $file)
+		mv $pkg*/fs$file fs$(dirname $file) || return 1
+	done << EOT
+gpxe-pxe	/usr/share/boot/gpxe.pxe
+EOT
+}
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	cp -a fs/. $fs
+}
+
+post_install()
+{
+	[ -n "$URLS" ] && \
+	echo "$URLS" | dostounix | sed 's/$/,/' | cat - /dev/null | \
+	dd of=$1/usr/share/boot/gpxe.pxe bs=1 seek=5 count=256 2> /dev/null
+	grep -q inetd $1/etc/rcS.conf ||
+	sed -i 's/^RUN_DAEMONS="/&inetd /' $1/etc/rcS.conf
+	grep -q udhcpd $1/etc/rcS.conf ||
+	sed -i 's/^RUN_DAEMONS="/&udhcpd /' $1/etc/rcS.conf
+	grep -q tftpd $1/etc/rcS.conf ||
+	sed -i 's/^RUN_DAEMONS="/&tftpd /' $1/etc/rcS.conf
+	grep -q tftpd $1/etc/inetd.conf || cat >> $1/etc/inetd.conf <<EOT
+tftp	dgram	udp	wait	root	/usr/bin/tftpd /usr/bin/tftpd -r /usr/share/boot
+EOT
+	cat >> $1/etc/udhcpd.conf <<EOT
+opt  bootfile  gpxe.pxe
+EOT
+}
+
+config_form()
+{
+	[ -n "$URLS" ] ||
+	URLS="$(dd if=$1/usr/share/boot/gpxe.pxe bs=1 skip=5 count=256 2> /dev/null | \
+		strings | sed s'/,/\n/g')"
+	cat <<EOT
+Boot url list :
+<textarea name="URLS" cols="60" rows="5" wrap="off">
+$URLS
+</textarea>
+EOT
+}
