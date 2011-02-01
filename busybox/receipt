@@ -1,0 +1,172 @@
+# SliTaz package receipt.
+
+PACKAGE="busybox"
+VERSION="1.18.2"
+CATEGORY="base-system"
+SHORT_DESC="Busybox combines tiny versions of many common UNIX utilities."
+MAINTAINER="pascal.bellard@slitaz.org"
+[ -n "$TARGET" ] || TARGET="i486"
+DEPENDS="slitaz-base-files"
+BUILD_DEPENDS="bzip2 uclibc-cross-compiler-$TARGET"
+TARBALL="$PACKAGE-$VERSION.tar.bz2"
+WEB_SITE="http://www.busybox.net/"
+WGET_URL="http://www.busybox.net/downloads/$TARBALL"
+CONFIG_FILES="/etc/dnsd.conf /etc/inetd.conf /etc/udhcpd.conf /etc/resolv.conf"
+
+apply_bb_patchs()
+{
+    cd $src
+    while read file; do
+    	[ -f done.$file ] && continue
+    	echo "Apply $file..."
+    	patch -p1 < ../stuff/$PACKAGE-${VERSION%.*}-$file || return 1
+	touch done.$file
+    done <<EOT
+tar.u
+stat.u
+ris.u
+zmodules.u
+printable.u
+cmdline.u
+EOT
+    cp ../stuff/$PACKAGE-${VERSION%.*}.config .config
+    var="CONFIG_CROSS_COMPILER_PREFIX"
+    sed -i "s/.*$var.*/$var=\"uclibc-$TARGET-\"/" .config
+}
+
+# Rules to compile & install the temporary toolchain.
+cook_tmp_toolchain()
+{
+    { apply_bb_patchs && 
+    make oldconfig &&
+    make &&
+    make CONFIG_PREFIX=/tools install
+    } || return 1
+    echo "Chmod 4755 on busybox binary..."
+    chmod 4755 /tools/bin/busybox
+}
+
+# Rules to configure and make the package.
+compile_rules()
+{
+    { apply_bb_patchs && 
+    make oldconfig &&
+    make &&
+    make install
+    } || return 1
+    echo "Chmod 4755 on busybox binary..."
+    chmod 4755 _install/bin/busybox
+}
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+    cp -a $src/_install/* $fs
+    rm -f $fs/bin/bbconfig $fs/usr/bin/ar
+    mkdir -p $fs/etc/init.d
+    # Busybox config files.
+    cp stuff/busybox.conf $fs/etc
+    chmod 600 $fs/etc/busybox.conf
+    cp stuff/dnsd.conf $fs/etc
+    cp stuff/udhcpd.conf $fs/etc
+    touch $fs/etc/resolv.conf
+    cp stuff/inetd.conf $fs/etc
+    cp stuff/daemon $fs/etc/init.d
+    for i in crond dnsd ftpd httpd inetd klogd ntpd syslogd telnetd tftpd \
+	     udhcpd zcip ; do
+	grep -qi config_$i=y $src/.config &&
+	ln -s daemon $fs/etc/init.d/$i
+    done
+    cp stuff/init $fs
+    rm $fs/linuxrc
+    mkdir -p $fs/etc/modprobe.d
+    # Udhcpc stuff.
+    mkdir -p $fs/usr/share/udhcpc
+    cp stuff/udhcp.script $fs/usr/share/udhcpc/default.script
+    chmod +x $fs/usr/share/udhcpc/default.script
+    # ZeroConf stuff.
+    cp stuff/zcip.script $fs/etc
+    # Httpd stuff.
+    cp stuff/httpd_helper.sh $fs/usr/bin
+    chmod +x $fs/usr/bin/httpd_helper.sh
+    # .desktop stuff
+    mkdir -p $fs/usr/share
+    cp -a stuff/applications $fs/usr/share
+    # prepare rootfs.cpio for kernel-* packages
+    mkdir -p $src/rootfs/lib
+    cp -a $fs/. $src/rootfs/.
+    cd $src
+    for i in slitaz-base-files slitaz-boot-scripts ; do
+    	tazpkg get $i
+    	tazpkg extract $i*.tazpkg
+    	cp -a $i*/fs/. rootfs/.
+    	grep -qs ^post_install $i*/receipt || continue
+    	( . $i*/receipt ; post_install rootfs )
+    done
+    LD_LIBRARY_PATH=/usr/share/uclibc-cross-compiler-$TARGET/lib \
+	uclibc-$TARGET-ldd busybox 2> /dev/null | \
+	awk '/=>/ { print $3 }' | while read file ; do
+	cp -a $file rootfs/lib
+	while [ -L "$file" ]; do
+		dir="$(dirname $file)/"
+		file="$(readlink $file)"
+		case "$file" in
+		/*) ;;
+		*)  file="$dir$file";;
+		esac
+		cp -a "$file" rootfs/lib
+	done
+    done
+    chown 0.0 rootfs/lib/*
+    rm -rf rootfs/tmp rootfs/var/games rootfs/var/cache \
+	rootfs/bin/bootlog rootfs/etc/modprobe.d rootfs/home \
+	rootfs/sbin/mktazdevs.sh rootfs/usr/bin/man \
+	rootfs/usr/share/applications rootfs/sys \
+	rootfs/etc/nsswitch.conf rootfs/etc/zcip.script \
+	rootfs/etc/udhcpd.conf rootfs/etc/inetd.conf \
+	rootfs/usr/lib rootfs/usr/games rootfs/usr/share/doc \
+	rootfs/usr/local rootfs/var/lock rootfs/var/spool rootfs/media
+	
+    ln -s var/tmp rootfs/tmp
+
+    ( cd rootfs ; find | cpio -o -H newc ) > rootfs.cpio
+    du -h rootfs.cpio
+}
+
+# Force glibc-2.7 reinstall if 2.3.6 still in use.
+pre_install()
+{
+	local i
+	cp -a /etc/resolv.conf /etc/resolv.conf-busybox-install
+	answer=""
+	for i in $(cat $1$INSTALLED/$PACKAGE/files.list); do
+		[ -f $1$i ] || continue
+		case "$i" in
+		/bin/busybox) continue ;;
+		*bin/*) ;;
+		*) continue ;;
+		esac
+		if [ -z "$answer" ]; then
+			echo -n "Keep installed GNU utilities ? "
+			read -t 30 answer	# by default: keep
+			case "$answer" in
+			n*|N*) break;;
+			*) answer="Y";;
+			esac
+		fi
+		cp -a $1$i $1$i-busybox-install
+	done
+}
+
+post_install()
+{
+	local i
+	[ -f /etc/resolv.conf-busybox-install ] &&
+	mv -f /etc/resolv.conf-busybox-install /etc/resolv.conf
+	while read i ; do
+		[ -f $1$i-busybox-install ] || continue
+		mv $1$i-busybox-install $1$i
+	done < $1$INSTALLED/$PACKAGE/files.list
+	chmod 4755 $1/bin/busybox
+	sed -i "s@vcsa2txt.*\$@busybox conspy -d | sed 's/ *\$//;/^\$/d;/^Processi\\\\|^.witchi/,\$!d' > /var/log/boot.log@" $1/etc/init.d/rcS
+}
