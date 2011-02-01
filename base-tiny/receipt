@@ -1,0 +1,133 @@
+# SliTaz package receipt.
+
+PACKAGE="base-tiny"
+VERSION="1.0"
+CATEGORY="tiny-slitaz"
+SHORT_DESC="Tiny SliTaz base configuration files"
+MAINTAINER="pascal.bellard@slitaz.org"
+WEB_SITE="http://mirror.slitaz.org/pizza/tiny/"
+AUTO_SELECTION="always"
+CONFIG_FILES="/etc/network.conf /etc/passwd /etc/shadow \
+/root/.profile /etc/fstab /etc/init.d/local.sh"
+
+# Rules to configure and make the package.
+compile_rules()
+{
+	mkdir -p fs/var/lib fs/etc
+	echo "none" > fs/var/lib/detected-modules
+	echo "LANG=C" > fs/etc/locale.conf
+	while read pkg file ; do
+		if [ ! -s $pkg*/fs$file ]; then
+			tazpkg get $pkg
+			tazpkg extract $pkg*.tazpkg
+		fi
+		mkdir -p fs$(dirname $file)
+		mv $pkg*/fs$file fs$(dirname $file) || return 1
+	done << EOT
+busybox			/etc/udhcpd.conf
+busybox			/etc/inetd.conf
+slitaz-base-files	/etc/fstab
+slitaz-base-files	/etc/group
+slitaz-boot-scripts	/etc/inittab
+slitaz-boot-scripts	/etc/network.conf
+slitaz-boot-scripts	/etc/init.d/local.sh
+slitaz-boot-scripts	/etc/rcS.conf
+EOT
+}
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	cp -a fs/. $fs
+}
+
+config_form()
+{
+	[ -n "$PASSWORD"   ] || PASSWORD=root
+	[ -n "$INTERFACE"  ] || INTERFACE=eth0
+	[ -n "$IP"         ] || IP=192.168.0.6
+	[ -n "$NETMASK"    ] || NETMASK=255.255.255.0
+	[ -n "$GATEWAY"    ] || GATEWAY=192.168.0.1
+	[ -n "$DNS_SERVER" ] || DNS_SERVER='192.168.0.1 192.168.0.2'
+	[ -n "$FSTAB"      ] || FSTAB='/dev/hda1       /mnt         ext3    defaults          0       2'
+	[ -n "$RC_LOCAL"   ] || RC_LOCAL='[ -x /mnt/boot/init ] && /mnt/boot/init'
+	cat <<EOT
+<table>
+<tr>
+<td>Root password</td>
+<td><input type="text" name="PASSWORD" value="$PASSWORD" /></td>
+</tr>
+<tr>
+<td>Interface</td>
+<td><input type="text" name="INTERFACE" value="$INTERFACE" /></td>
+</tr>
+<tr>
+<td>Network configuration</td>
+<td><select name="MODE">
+	<option value="STATIC">STATIC</option>
+	<option value="DHCP"$([ "$MODE" == "DHCP" ] && echo ' selected="selected"')>DHCP</option>
+</select></td>
+</tr>
+<tr>
+<td>Internet address</td>
+<td><input type="text" name="IP" value="$IP" /></td>
+</tr>
+<tr>
+<td>Netmask</td>
+<td><input type="text" name="NETMASK" value="$NETMASK" /></td>
+</tr>
+<tr>
+<td>Gateway</td>
+<td><input type="text" name="GATEWAY" value="$GATEWAY" /></td>
+</tr>
+<tr>
+<td>DNS server(s)</td>
+<td><input type="text" name="DNS_SERVER" value="$DNS_SERVER" /></td>
+</tr>
+<tr>
+<td>Filesystems</td>
+<td><textarea name="FSTAB" cols="60" wrap="off">
+$FSTAB
+</textarea></td>
+</tr>
+<tr>
+<td>Additionnal boot commands</td>
+<td><textarea name="RC_LOCAL" cols="60" wrap="off">
+$RC_LOCAL
+</textarea></td>
+</tr>
+</table>
+EOT
+}
+
+post_install()
+{
+	DHCP="no"
+	STATIC="yes"
+	case "$MODE" in
+	"")	return 1;;
+	DHCP)	DHCP="yes"
+		STATIC="no"
+	esac
+	sed -i -e "s/^DNS_SERVER=.*/DNS_SERVER=\"$DNS_SERVER\"/" \
+	       -e "s/^INTERFACE=.*/INTERFACE=\"$INTERFACE\"/" \
+	       -e "s/^NETMASK=.*/NETMASK=\"$NETMASK\"/" \
+	       -e "s/^GATEWAY=.*/GATEWAY=\"$GATEWAY\"/" \
+	       -e "s/^STATIC=.*/STATIC=\"$STATIC\"/" \
+	       -e "s/^DHCP=.*/DHCP=\"$DHCP\"/" \
+	       -e "s/^IP=.*/IP=\"$IP\"/" $1/etc/network.conf
+	if [ -n "$PASSWORD" ]; then
+		chroot $1/ "echo 'root:$PASSWORD' | chpasswd"
+	else
+		sed -i 's/^root:[^:]*:/root::/' $1/etc/passwd
+		cat > $1/root/.profile <<EOT
+grep -qs ^root:: /etc/passwd /etc/shadow && passwd
+EOT
+	fi
+	[ -n "$FSTAB" ] && cat >> $1/etc/fstab <<EOT
+$FSTAB
+EOT
+	[ -n "$RC_LOCAL" ] && cat >> $1/etc/init.d/local.sh <<EOT
+$RC_LOCAL
+EOT
+}
