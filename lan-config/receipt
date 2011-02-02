@@ -31,6 +31,24 @@ EOT
 		echo "Configuring static IP on $LAN_INTERFACE: $LAN_IP..."\
 		/sbin/ifconfig $LAN_INTERFACE $LAN_IP netmask $LAN_NETMASK up\
 	fi#' fs/etc/init.d/network.sh
+	cat >> fs/etc/network.conf <<EOT
+
+# Set lan interface.
+LAN_INTERFACE="eth1"
+
+# Dynamic IP address.
+# Enable/disable DHCP lan client at boot time.
+LAN_DHCP="no"
+
+# Static IP address.
+# Enable/disable static lan IP at boot time.
+LAN_STATIC="yes"
+
+# Set lan IP address and netmask for a static IP.
+LAN_IP="192.168.1.1"
+LAN_NETMASK="255.255.255.0"
+
+EOT
 }
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
@@ -66,6 +84,8 @@ config_form()
 <td><input type="text" name="NETMASK" value="$NETMASK" /></td>
 </tr>
 </table>
+<input type="checkbox" name="ROUTING" value="ON" checked="checked" />
+Enable LAN routing<br>
 EOT
 }
 
@@ -83,4 +103,9 @@ post_install()
 	       -e "s/^LAN_STATIC=.*/LAN_STATIC=\"$STATIC\"/" \
 	       -e "s/^LAN_DHCP=.*/LAN_DHCP=\"$DHCP\"/" \
 	       -e "s/^LAN_IP=.*/LAN_IP=\"$IP\"/" $1/etc/network.conf
+	[ "$ROUTING" == "ON" ] && cat >> $1/etc/init.d/local.sh <<EOT
+# Enable IP routing between interfaces
+echo 1 > /proc/sys/net/ipv4/ip_forward
+
+EOT
 }
