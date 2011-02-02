@@ -1,0 +1,152 @@
+# SliTaz package receipt.
+
+PACKAGE="ppp"
+VERSION="2.4.5"
+CATEGORY="tiny-slitaz"
+SHORT_DESC="Point to Point Protocol (Internet with RTC modems)"
+MAINTAINER="pascal.bellard@slitaz.org"
+TARBALL="$PACKAGE-$VERSION.tar.gz"
+WEB_SITE="http://ppp.samba.org/"
+WGET_URL="ftp://ftp.samba.org/pub/ppp/$TARBALL"
+[ -n "$TARGET" ] || TARGET="i486"
+BUILD_DEPENDS="uclibc-cross-compiler-$TARGET"
+DEPENDS="libdl libgcc_s"
+CONFIG_FILES="/etc/ppp/"
+
+# Rules to configure and make the package.
+compile_rules()
+{
+	cd $src
+	./configure --prefix=/usr --mandir=/usr/share/man \
+	$CONFIGURE_ARGS &&
+	make CC=uclibc-$TARGET-cc &&
+	make DESTDIR=$PWD/_pkg/usr install
+}
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	mkdir -p $fs/etc/ppp/peers $fs/etc/ppp/scripts $fs/usr/sbin
+	cp -a $_pkg/usr/sbin/pppd  $fs/usr/sbin
+	cp -a $src/scripts/ip-up.local.add $fs/etc/ppp/ip-up
+	cp -a $src/scripts/ip-down.local.add $fs/etc/ppp/ip-down
+	cp -a stuff/* $fs
+	cp -a $src/scripts/ppp-on $fs/etc/ppp/scripts
+	cp -a $src/scripts/ppp-on-dialer $fs/etc/ppp/scripts
+	cp -a $src/scripts/ppp-off $fs/etc/ppp/scripts
+	cp -a $src/scripts/callback $fs/etc/ppp/scripts
+	cp -a $src/scripts/redialer $fs/etc/ppp/scripts
+	cp -a $src/etc.ppp/* $fs/etc/ppp
+	chmod +x $fs/etc/ppp/ip*
+	# insert #!/bin/sh  on top line in ip* scripts
+	sed -i '1i\#!/bin/sh' $fs/etc/ppp/ip*
+	# add empty peers dir
+	sed -i 's:ppp/ppp-on-dialer:ppp/scripts/ppp-on-dialer:' \
+		$fs/etc/ppp/scripts/ppp-on
+
+#sed: taz/ppp-2.4.5/fs/etc/ppp/scripts/ppp-on: Not a directory
+
+
+}
+
+config_form()
+{
+	[ -n "$OPTIONS"   ] || OPTIONS="lock"
+	[ -n "$LOCAL_IP"  ] || LOCAL_IP="0.0.0.0"
+	[ -n "$REMOTE_IP" ] || REMOTE_IP="0.0.0.0"
+	[ -n "$NETMASK"   ] || NETMASK="255.255.255.0"
+	cat <<EOT
+<pre>
+$(cat $1/etc/ppp/README.scripts)
+</pre>
+<table>
+<tr>
+<td>Telephone number</td>
+<td><input type="text" name="TELEPHONE" value="$TELEPHONE" /></td>
+</tr>
+<tr>
+<td>Account name</td>
+<td><input type="text" name="ACCOUNT" value="$ACCOUNT" /></td>
+</tr>
+<tr>
+<td>Account password</td>
+<td><input type="text" name="PASSWORD" value="$PASSWORD" /></td>
+</tr>
+<tr>
+<td>callback password</td>
+<td><input type="text" name="MODEMPASS" value="$MODEMPASS" /></td>
+</tr>
+<tr>
+<td>Options</td>
+<td><textarea name="OPTIONS" cols="60" wrap="off">
+$OPTIONS
+</textarea></td>
+</tr>
+<tr>
+<td></td><td><pre>$(cat $1/etc/ppp/chap-secrets)</pre></td>
+</tr>
+<tr>
+<td>chap-secrets</td>
+<td><textarea name="CHAPSECRETS" cols="60" wrap="off">
+$CHAPSECRETS
+</textarea></td>
+</tr>
+<tr>
+<td></td><td><pre>$(cat $1/etc/ppp/pap-secrets)</pre></td>
+</tr>
+<tr>
+<td>pap-secrets</td>
+<td><textarea name="PAPSECRETS" cols="60" wrap="off">
+$PAPSECRETS
+</textarea></td>
+</tr>
+<tr>
+<td>Connection script</td>
+<td><select name="DIALER_SCRIPT">
+	<option value="/etc/ppp/ppp-on-dialer">/etc/ppp/ppp-on-dialer</option>
+	<option value="/etc/ppp/scripts/callback"$([ "$DIALER_SCRIPT" == "/etc/ppp/scripts/callback" ] && 
+	echo ' selected="selected"')>/etc/ppp/scripts/callback</option>
+</select></td>
+</tr>
+<tr>
+<td>local ip</td>
+<td><input type="text" name="LOCAL_IP" value="$LOCAL_IP" /></td>
+</tr>
+<tr>
+<td>remote ip</td>
+<td><input type="text" name="REMOTE_IP" value="$REMOTE_IP" /></td>
+</tr>
+<tr>
+<td>netmask</td>
+<td><input type="text" name="NETMASK" value="$NETMASK" /></td>
+</tr>
+</table>
+EOT
+}
+
+post_install()
+{
+	rm -f $1/etc/ppp/README.scripts
+	cat > $1/etc/ppp/options <<EOT
+$OPTIONS
+EOT
+	cat >> $1/etc/ppp/pap-secrets <<EOT
+$PAPSECRETS
+EOT
+	cat >> $1/etc/ppp/chap-secrets <<EOT
+$CHAPSECRETS
+EOT
+	sed -i  -e "s/^TELEPHONE=.*/TELEPHONE=\"$TELEPHONE\"/" \
+		-e "s/^ACCOUNT=.*/ACCOUNT=\"$ACCOUNT\"/" \
+		-e "s/^PASSWORD=.*/PASSWORD=\"$PASSWORD\"/" \
+		-e "s/^LOCAL_IP=.*/LOCAL_IP=\"$LOCAL_IP\"/" \
+		-e "s/^REMOTE_IP=.*/REMOTE_IP=\"$REMOTE_IP\"/" \
+		-e "s/^NETMASK=.*/NETMASK=\"$NETMASK\"/" \
+		-e "s/^DIALER_SCRIPT=.*/DIALER_SCRIPT=\"$DIALER_SCRIPT\"/" \
+		$1/etc/ppp/scripts/ppp-on
+	sed -i  -e "s/^PHONE=.*/PHONE=\"$TELEPHONE\"/" \
+		-e "s/^PASSWORD=.*/PASSWORD=\"$PASSWORD\"/" \
+		-e "s/^ACCOUNT=.*/ACCOUNT=\"$ACCOUNT\"/" \
+		-e "s/^MODEMPASS=.*/MODEMPASS=\"$MODEMPASS\"/" \
+		$1/etc/ppp/scripts/callback
+}

@@ -1,0 +1,73 @@
+# SliTaz package receipt.
+
+PACKAGE="ppp-plugins-atm"
+VERSION="2.4.5"
+CATEGORY="network"
+SHORT_DESC="ppp extras ADSL using pppoatm"
+MAINTAINER="pascal.bellard@slitaz.org"
+WEB_SITE="http://ppp.samba.org/"
+DEPENDS="ppp"
+WANTED="ppp"
+CONFIG_FILES="/etc/ppp/"
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	mkdir -p $fs/usr/lib/pppd/$VERSION
+	cp -a $_pkg/usr/lib/pppd/$VERSION/pppoatm.so $fs/usr/lib/pppd/$VERSION
+}
+
+config_form()
+{
+	[ -n "$OPTIONS" -a "$OPTIONS" != "lock" ] || OPTIONS="lock
+plugin pppoatm.so 8.35
+name provider-ID
+noipdefault
+usepeerdns
+defaultroute
+persist
+noauth
+
+"
+	cat <<EOT
+<table>
+<tr>
+<td>Options</td>
+<td><textarea name="OPTIONS" cols="60" wrap="off">
+$OPTIONS
+</textarea></td>
+</tr>
+<tr>
+<td></td><td><pre>$(cat $1/etc/ppp/chap-secrets)</pre></td>
+</tr>
+<tr>
+<td>chap-secrets</td>
+<td><textarea name="CHAPSECRETS" cols="60" wrap="off">
+$CHAPSECRETS
+</textarea></td>
+</tr>
+<tr>
+<td></td><td><pre>$(cat $1/etc/ppp/pap-secrets)</pre></td>
+</tr>
+<tr>
+<td>pap-secrets</td>
+<td><textarea name="PAPSECRETS" cols="60" wrap="off">
+$PAPSECRETS
+</textarea></td>
+</tr>
+</table>
+EOT
+}
+
+post_install()
+{
+	dos2unix > $1/etc/ppp/options <<EOT
+$OPTIONS
+EOT
+	dos2unix >> $1/etc/ppp/pap-secrets <<EOT
+$PAPSECRETS
+EOT
+	dos2unix >> $1/etc/ppp/chap-secrets <<EOT
+$CHAPSECRETS
+EOT
+}

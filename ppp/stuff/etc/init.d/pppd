@@ -1,0 +1,12 @@
+#!/bin/sh
+
+case "$1" in
+start)
+	echo 1 > /proc/sys/net/ipv4/ip_forward
+	exec /etc/ppp/scripts/ppp-on ;;
+stop)
+	exec /etc/ppp/scripts/ppp-off ;;
+restart)
+	$0 stop
+	$0 start ;;
+esac
