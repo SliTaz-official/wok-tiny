@@ -1,0 +1,16 @@
+# SliTaz package receipt.
+
+PACKAGE="tcc-common"
+VERSION="0.9.25"
+CATEGORY="development"
+SHORT_DESC="Common files for Tiny C Compilers"
+MAINTAINER="pascal.bellard@slitaz.org"
+WEB_SITE="http://bellard.org/tcc/"
+WANTED="tcc"
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	mkdir -p $fs/usr/lib
+	cp -a $_pkg/usr/lib/tcc $fs/usr/lib
+}
