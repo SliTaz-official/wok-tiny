@@ -1,0 +1,59 @@
+# SliTaz package receipt.
+
+PACKAGE="wiki"
+VERSION="1.0"
+CATEGORY="network"
+SHORT_DESC="Tiny SliTaz Wiki"
+MAINTAINER="pascal.bellard@slitaz.org"
+WEB_SITE="http://mirror.slitaz.org/pizza/tiny/"
+DEPENDS="base-tiny"
+CONFIG_FILES="/etc/daemons.conf /etc/rcS.conf"
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	cp -a stuff/. $fs
+}
+
+post_install()
+{
+	grep -q httpd $1/etc/rcS.conf ||
+	sed -i 's/^RUN_DAEMONS="/&httpd /' $1/etc/rcS.conf
+	grep -q HTTPD_OPTIONS $1/etc/daemons.conf ||
+	cat >> $1/etc/daemons.conf <<EOT
+
+# Http daemon options.
+HTTPD_OPTIONS="-u 0:0"
+EOT
+	while read line comment ; do
+		grep -qs "^$line" $1/etc/httpd.conf && continue
+		echo "$line	$comment" >> $1/etc/httpd.conf
+	done <<EOT
+H:/var/www		# define the server root.
+I:index.sh		# Show index.html when a directory is requested
+*.sh:/bin/sh		# run xxx.sh through an interpreter
+A:127.0.0.1		# Allow local loopback connections
+$( . $1/etc/network.conf
+while [ -n "$IP" ]; do
+	echo "A:$IP/$NETMASK	# Allow address from $IP/$NETMASK"
+	IP="$LAN_IP" ; NETMASK="$LAN_NETMASK" ; LAN_IP=""
+done )
+D:*			# Deny from other IP connections
+EOT
+	sed -i "s/^PASSWORD=.*/PASSWORD=\"$WIKI_PASSWORD\"/" \
+		$1/var/www/wiki/config*.sh
+}
+
+config_form()
+{
+	[ -n "$WIKI_PASSWORD"   ] || WIKI_PASSWORD=test
+	cat <<EOT
+<table>
+<tr>
+<td>Wiki password</td>
+<td><input type="text" name="WIKI_PASSWORD" value="$WIKI_PASSWORD" /></td>
+</tr>
+</table>
+EOT
+}
+

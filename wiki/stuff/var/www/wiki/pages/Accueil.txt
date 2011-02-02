@@ -1,0 +1,34 @@
+!Bienvenue...
+!!...sur votre wiki
+Merci d'avoir choisi [WiKiss|http://wikiss.tuxfamily.org/].
+N'hésitez pas à parcourir cette installation par défaut, jusqu'à ce que vous vous sentiez à l'aise.
+
+!!Aide
+N'oubliez pas, toutes les informations sur ''WiKiss'' se trouvent sur le site http://wikiss.tuxfamily.org/
+Voyez en particulier :
+* l'[installation|http://wikiss.tuxfamily.org/?page=Installation] ;
+* la [documentation|http://wikiss.tuxfamily.org/?page=Utilisation] utilisateur ;
+* les détails sur la [configuration|http://wikiss.tuxfamily.org/?page=Configuration].
+Vous pouvez également obtenir de l'aide via la [liste de diffusion|http://wikiss.tuxfamily.org/?page=Listes]
+
+Pour tester l'édition et la mise en forme dans ''WiKiss'', cliquez simplement sur « '''Éditer''' » en haut de cet écran pour accéder à cette page (et la modifier). Vous pouvez aussi créer et tester via la page [BacASable].
+
+Allez voir l'[Aide] et [AideTables] pour un aperçu de toutes les possibilités. Vous pouvez toujours revenir sur cette page en cliquant sur « '''Accueil''' ».
+
+!!Nouveautés
+Cette version 0.3 de ''WiKiss'' apporte son lot de nouvelles fonctionnalités :
+* amélioration de la sécurité ;
+* intégration d'extensions par plugins (voir la [liste des plugins|?action=list] installés par défaut) ;
+* création de tables en [syntaxe wiki|?page=AideTables] (voir [wkp_Tables|http://wikiss.tuxfamily.org/?page=wkp_Tables]) ;
+* génération automatique d'un flux RSS des dernières modifications (voir [wkp_Rss|http://wikiss.tuxfamily.org/?page=wkp_Rss]) ;
+* correction de nombreux bugs.
+Voyez le [Changelog|http://wikiss.tuxfamily.org/?page=Changelog] complet pour tous les détails
+
+!!Aider WiKiss
+Vous pouvez aider au développement de ''WiKiss'' de plusieurs manières :
+* en vous abonnant à la [liste de discutions|http://wikiss.tuxfamily.org/?page=Listes] ;
+* en rapportant des bugs via le [Bug Tracking System|http://wikiss.tuxfamily.org/bts/] ;
+* en [développant des plugins|http://wikiss.tuxfamily.org/?page=Plugin] pour ajouter de nouvelles fonctions ;
+* ...
+
+'''Amusez vous !'''
