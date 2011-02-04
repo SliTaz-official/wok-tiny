@@ -23,6 +23,7 @@ compile_rules()
 		tazwok cook busybox
 	fi
 	cp $WOK/busybox/busybox*/rootfs.cpio $src
+	cp $WOK/busybox/busybox*/.config $src/config-busybox
 
 	# this is code to help update the kernel version faster
 	#for i in $(grep -l 'WANTED="linux"' $WOK/*/receipt)
@@ -124,6 +125,7 @@ genpkg_rules()
     cp -a $_pkg/../$PACKAGE $fs/boot/bzImage
     cp -a $_pkg/../System.map-${PACKAGE#kernel-} $fs/boot/System.map
     cp -a $_pkg/../config-${PACKAGE#kernel-} $fs/boot/config
+    cp -a $_pkg/../config-busybox $fs/boot/config
     # Compress all modules.
     #./stuff/gztazmod.sh $_pkg/lib/modules/$VERSION-slitaz
 }
