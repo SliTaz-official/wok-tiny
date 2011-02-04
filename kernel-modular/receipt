@@ -125,7 +125,7 @@ genpkg_rules()
     cp -a $_pkg/../$PACKAGE $fs/boot/bzImage
     cp -a $_pkg/../System.map-${PACKAGE#kernel-} $fs/boot/System.map
     cp -a $_pkg/../config-${PACKAGE#kernel-} $fs/boot/config
-    cp -a $_pkg/../config-busybox $fs/boot/config
+    cp -a $_pkg/../config-busybox $fs/boot
     # Compress all modules.
     #./stuff/gztazmod.sh $_pkg/lib/modules/$VERSION-slitaz
 }

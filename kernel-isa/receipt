@@ -15,6 +15,6 @@ genpkg_rules()
     cp -a $WOK/kernel-modular/linux-$VERSION/$PACKAGE $fs/boot/bzImage
     cp -a $WOK/kernel-modular/linux-$VERSION/System.map-${PACKAGE#kernel-} $fs/boot/System.map
     cp -a $WOK/kernel-modular/linux-$VERSION/config-${PACKAGE#kernel-} $fs/boot/config
-    cp -a $_pkg/../config-busybox $fs/boot/config
+    cp -a $WOK/kernel-modular/linux-$VERSION/config-busybox $fs/boot
 }
 
