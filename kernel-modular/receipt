@@ -4,7 +4,7 @@ PACKAGE="kernel-modular"
 SOURCE="linux"
 VERSION="2.6.37"
 CATEGORY="base-system"
-SHORT_DESC="The Linux kernel and modules."
+SHORT_DESC="The Linux kernel and modules"
 DEPENDS="depmod"
 BUILD_DEPENDS="slitaz-toolchain perl git lzma"
 [ -n "$TARGET" ] &&

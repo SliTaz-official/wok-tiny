@@ -91,7 +91,7 @@ $FSTAB
 </textarea></td>
 </tr>
 <tr>
-<td>Additionnal boot commands</td>
+<td>Additional boot commands</td>
 <td><textarea name="RC_LOCAL" cols="60" wrap="off">
 $RC_LOCAL
 </textarea></td>
