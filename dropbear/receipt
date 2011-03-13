@@ -1,0 +1,112 @@
+# SliTaz package receipt.
+
+PACKAGE="dropbear"
+VERSION="0.53"
+CATEGORY="security"
+SHORT_DESC="Light SSH client and server."
+MAINTAINER="pascal.bellard@slitaz.org"
+TARBALL="$PACKAGE-$VERSION.tar.gz"
+DEPENDS=""
+[ -n "$TARGET" ] || TARGET="i486"
+BUILD_DEPENDS="dropbear uclibc-cross-compiler-$TARGET"
+SUGGESTED="sftp-server"
+WEB_SITE="http://matt.ucc.asn.au/dropbear/dropbear.html"
+WGET_URL="http://matt.ucc.asn.au/dropbear/releases/$TARBALL"
+CONFIG_FILES="/etc/dropbear"
+PROVIDE="ssh"
+TAGS="ssh"
+BUGS="should enable zlib"
+
+# Rules to configure and make the package.
+compile_rules()
+{
+	local i
+	local DROPBEARS
+	DROPBEARS="dbclient scp"
+	cd $src
+	sed -i  -e 's|/usr/X11R6/bin/xauth|/usr/bin/xauth|' \
+		-e 's|/usr/libexec/sftp-server|/usr/sbin/sftp-server|' \
+		options.h
+	./configure --prefix=/usr --without-pam --host=$TARGET-pc-linux-gnu \
+		--disable-zlib CC=uclibc-$TARGET-cc &&
+	make PROGRAMS="dropbear $DROPBEARS" MULTI=1 &&
+	install -d -m 755 $PWD/_pkg/usr/sbin &&
+	install -m 755 dropbearmulti $PWD/_pkg/usr/sbin/dropbear &&
+	chown root $PWD/_pkg/usr/sbin/dropbear &&
+	chgrp 0 $PWD/_pkg/usr/sbin/dropbear &&
+	install -d -m 755 $PWD/_pkg/usr/bin &&
+	for i in $DROPBEARS ssh; do
+		ln -s ../sbin/dropbear $PWD/_pkg/usr/bin/$i
+	done
+}
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	mkdir -p $fs/usr $fs/etc/init.d $fs/etc/dropbear
+	cp -a $_pkg/usr/bin $fs/usr
+	cp -a $_pkg/usr/sbin $fs/usr
+	ln -s daemon $fs/etc/init.d/dropbear
+	cat > $fs/etc/dropbear/banner <<EOT
+
+Secure login on Tiny SliTaz GNU/Linux powered by Dropbear.
+EOT
+	
+	# Fix dropbear initscript perms
+	chown -R root.root $fs
+}
+
+# Post message when installing.
+post_install()
+{
+	echo "$DSSKEY" | uudecode - > $1/etc/dropbear/dropbear_dss_host_key
+	echo "$RSAKEY" | uudecode - > $1/etc/dropbear/dropbear_rsa_host_key
+	chmod 600 $1/etc/dropbear/dropbear_*_host_key
+	grep -q dropbear $1/etc/rcS.conf ||
+	sed -i 's/^RUN_DAEMONS="/&dropbear /' $1/etc/rcS.conf
+	sed -i "s/^DROPBEAR_OPTIONS=.*/DROPBEAR_OPTIONS=\"$DROPBEAR_OPTS\"/" \
+		$1/etc/daemons.conf
+}
+
+config_form()
+{
+	[ -n "$DROPBEAR_OPTS" ] || DROPBEAR_OPTS="-b /etc/dropbear/banner"
+	if [ -z "$DSSKEY" ]; then
+		dropbearkey -t dss -f /tmp/mkssh$$ > /dev/null 2>&1
+		DSSKEY="$(uuencode -m - < /tmp/mkssh$$)"
+		rm -f /tmp/mkssh$$
+	fi
+	if [ -z "$RSAKEY" ]; then
+		dropbearkey -t rsa -f /tmp/mkssh$$ > /dev/null 2>&1
+		RSAKEY="$(uuencode -m - < /tmp/mkssh$$)"
+		rm -f /tmp/mkssh$$
+	fi
+	cat <<EOT
+<table>
+<tr>
+<td>Server options</td>
+<td><input type="text" name="DROPBEAR_OPTS" value="$DROPBEAR_OPTS" /></td>
+</tr>
+<tr>
+<td>DSS key</td>
+<td><textarea name="DSSKEY" cols="60" rows="13" wrap="off">
+$DSSKEY
+</textarea></td>
+</tr>
+<tr>
+<td>RSA key</td>
+<td><textarea name="RSAKEY" cols="60" rows="12" wrap="off">
+$RSAKEY
+</textarea></td>
+</tr>
+</table>
+You can set your dropbear key
+<pre>
+# uuencode -m - < /etc/dropbear/dropbear_dss_host_key
+</pre>
+Or your ssh key
+<pre>
+# dropbearconvert openssh dropbear /etc/ssh/id_dsa /dev/stdout | uuencode -m -
+</pre>
+EOT
+}
