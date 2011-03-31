@@ -77,7 +77,7 @@ genpkg_rules()
 	grep -qi config_$i=y $src/.config &&
 	ln -s daemon $fs/etc/init.d/$i
     done
-    cp stuff/init $fs
+    ln -s bin/busybox $fs/init
     rm $fs/linuxrc
     mkdir -p $fs/etc/modprobe.d
     # Udhcpc stuff.
