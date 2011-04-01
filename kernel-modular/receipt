@@ -81,7 +81,7 @@ aufs2-standalone.patch
 EOT
 	make mrproper
 	cd Documentation/lguest
-	make CC=uclibc-$TARGET-cc lguest || return 1
+	#make CC=uclibc-$TARGET-cc lguest || return 1
 	cd ../..
 
 	# Build bzImage without modules first

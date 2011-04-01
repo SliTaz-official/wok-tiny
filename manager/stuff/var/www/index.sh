@@ -9,6 +9,8 @@ sed -e 's/.*Intel(R) //' -e 's/.*AMD //' -e 's/.*: //' \
     -e 's/@//' -e 's/(R)//' -e 's/(TM)//' -e 's/CPU //' -e 's/Processor //'
 }
 
+header
+
 cat <<EOT
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
