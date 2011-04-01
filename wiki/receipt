@@ -35,7 +35,8 @@ I:index.sh		# Show index.html when a directory is requested
 A:127.0.0.1		# Allow local loopback connections
 $( . $1/etc/network.conf
 while [ -n "$IP" ]; do
-	echo "A:$IP/$NETMASK	# Allow address from $IP/$NETMASK"
+	IFS=. ; set -- $IP $NETMASK ; unset IFS
+	echo "A: $(($1 & $5)).$(($2 & $6)).$(($3 & $7)).$(($4 & $8))/$NETMASK"
 	IP="$LAN_IP" ; NETMASK="$LAN_NETMASK" ; LAN_IP=""
 done )
 D:*			# Deny from other IP connections
