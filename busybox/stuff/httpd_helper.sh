@@ -1,40 +1,43 @@
 #!/bin/sh
 #
-# busybox/httpd helper for shell cgi scripts
+# busybox/httpd helper for shell cgi scripts, providing:
 #
-# GET [var] | POST [var] | FILE [var {name|tmpname|size|type}]
-# urlencode string | htmlentities string | httpinfo
+# GET [var [index]] | POST [var [index]] | COOKIE [var [index]]
+# FILE [var {name|tmpname|size|type}]
+# header [strings]... | urlencode string | htmlentities string | httpinfo
+#
 
 alias urlencode='httpd -e'
 
+# Send headers, example :
+# header "Content-type: text/html" "Set-Cookie: name=value; HttpOnly"
 header()
 {
-[ -z "$1" ] && echo -e "Content-type: text/html\r\n" || echo -e "$1\r\n"
+local i
+[ -z "$1" ] && set -- "Content-type: text/html"
+for i in "$@" "" ; do echo -e "$i\r"; done
 }
 
 htmlentities()
 {
-echo $1 | sed -e 's|&|\&amp;|g' -e 's|<|\&lt;|g' -e 's|>|\&gt;|g' -e 's|"|\&quot;|g'
+echo $1 | sed 's|&|\&amp;|g;s|<|\&lt;|g;s|>|\&gt;|g;s|"|\&quot;|g'
 }
 
-GET()
+_ARRAY()
 {
-[ -z "$1" ] && echo $GET__NAMES || [ -n "$GET__NAMES" ] && eval echo \$GET_$1
+[ -z "$2" ] && eval echo \$${1}__NAMES ||
+	[ -n "$(eval echo \$${1}__NAMES)" ] && eval echo \$${1}_${2}_${3:-1}
 }
 
-POST()
-{
-[ -z "$1" ] && echo $POST__NAMES || [ -n "$POST__NAMES" ] && eval echo \$POST_$1
-}
-
-FILE()
-{
-[ -z "$1" ] && echo $FILE__NAMES || [ -n "$FILE__NAMES" ] && eval echo \$FILE_${1}_$2
-}
+GET()		{ _ARRAY GET	"$1" $2; }
+POST()		{ _ARRAY POST	"$1" $2; }
+FILE()		{ _ARRAY FILE	"$1" $2; }
+COOKIE()	{ _ARRAY COOKIE	"$1" $2; }
 
 httpinfo()
 {
 local i
+local j
 local x
 for i in SERVER_PROTOCOL SERVER_SOFTWARE SERVER_NAME SERVER_PORT AUTH_TYPE \
 	 GATEWAY_INTERFACE REMOTE_HOST REMOTE_ADDR REMOTE_PORT \
@@ -46,15 +49,20 @@ for i in SERVER_PROTOCOL SERVER_SOFTWARE SERVER_NAME SERVER_PORT AUTH_TYPE \
 	eval x=\$$i
 	[ -n "$x" ] && echo "$i='$x'"
 done
-for i in $GET__NAMES ; do
-	echo "GET[$i]='$(GET $i)'"
+for x in GET POST COOKIE ; do
+	for i in $($x) ; do
+		if [ $($x $i count) -gt 1 ]; then
+			for j in $(seq 1 $($x $i count)); do
+				echo "$x($i,$j)='$($x $i $j)'"
+			done
+		else
+			echo "$x($i)='$($x $i)'"
+		fi
+	done
 done
-for i in $POST__NAMES ; do
-	echo "POST[$i]='$(POST $i)'"
-done
-for i in $FILE__NAMES ; do
+for i in $(FILE) ; do
 	for j in name size type tmpname ; do
-		echo "FILE[$i][$j]='$(FILE $i $j)'"
+		echo "FILE($i,$j)='$(FILE $i $j)'"
 	done
 done
 }
@@ -63,17 +71,26 @@ read_query_string()
 {
 local i
 local names
+local cnt
 names=""
 IFS="&"
-for i in $QUERY_STRING ; do
-	names="$names ${i%%=*}"
-	eval ${1}_${i%%=*}=\'$(httpd -d "${i#*=}" | sed "s/'/\'\\\\\'\'/g")\'
+for i in $2 ; do
+	var=${i%%=*}
+	case " $names " in
+	*\ $var\ *)	eval cnt=\$${1}_${var}_count ;;
+	*)		cnt=0
+			names="$names $var" ;;
+	esac
+	eval ${1}_${var}_count=$((++cnt))
+	eval ${1}_${var}_$cnt=\'$(httpd -d "${i#*=}" | sed "s/'/\'\\\\\'\'/g")\'
 done
 unset IFS
 eval ${1}__NAMES=\'${names# }\'
 }
 
-[ "$REQUEST_METHOD" == "GET" -a -z "$GET__NAMES" ] && read_query_string GET
+[ -z "$GET__NAMES" ] && read_query_string GET "$QUERY_STRING"
+[ -z "$COOKIE_NAMES" ] &&
+	read_query_string COOKIE "$(echo "$HTTP_COOKIE" | sed 's/; /\&/g')"
 
 ddcut()
 {
@@ -94,7 +111,7 @@ tmp=$(($count / $page))
 dd bs=1 count=$(($count - ($tmp * $page) ))
 }
 
-if [ "$REQUEST_METHOD" == "POST" -a -z "$POST__NAMES" ]; then
+if [ "$REQUEST_METHOD$POST__NAMES" == "POST" ]; then
 	prefix=/tmp/httpd_post
 	mkdir $prefix$$
 	now=$(stat -c %Y $prefix$$)
@@ -106,7 +123,7 @@ if [ "$REQUEST_METHOD" == "POST" -a -z "$POST__NAMES" ]; then
 	cat > ${post}0
 	read delim < ${post}0
 	case "$delim" in
-	-*)	awk "/$delim/ { o+=index(\$0,\"$delim\")-1; print o }
+	-*)	awk "/${delim%?}/ { o+=index(\$0,\"$delim\")-1; print o }
 	   		  { o+=1+length() }" < ${post}0 | while read offset; do
 		    if [ $offset -ne 0 ]; then
 			ddcut $last $offset < ${post}0 > $post$n 2> /dev/null
@@ -159,8 +176,7 @@ if [ "$REQUEST_METHOD" == "POST" -a -z "$POST__NAMES" ]; then
 		    rm -f $i
 		done
 		rmdir $(dirname $post) ;;
-	*)	export QUERY_STRING="$delim"
-		rm -rf $(dirname $post)
-		read_query_string POST ;;
+	*)	rm -rf $(dirname $post)
+		read_query_string POST "$delim" ;;
 	esac
 fi

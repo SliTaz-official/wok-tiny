@@ -1,7 +1,7 @@
 # SliTaz package receipt.
 
 PACKAGE="busybox"
-VERSION="1.18.2"
+VERSION="1.18.4"
 CATEGORY="base-system"
 SHORT_DESC="Busybox combines tiny versions of many common UNIX utilities."
 MAINTAINER="pascal.bellard@slitaz.org"
@@ -28,6 +28,7 @@ ris.u
 zmodules.u
 printable.u
 cmdline.u
+conspy.u
 EOT
     cp ../stuff/$PACKAGE-${VERSION%.*}.config .config
     var="CONFIG_CROSS_COMPILER_PREFIX"
@@ -121,7 +122,7 @@ genpkg_rules()
     rm -rf rootfs/tmp rootfs/var/games rootfs/var/cache \
 	rootfs/bin/bootlog rootfs/etc/modprobe.d rootfs/home \
 	rootfs/sbin/mktazdevs.sh rootfs/usr/bin/man \
-	rootfs/usr/share/applications rootfs/sys \
+	rootfs/usr/share/applications rootfs/sys rootfs/usr/bin/ldd \
 	rootfs/etc/nsswitch.conf rootfs/etc/zcip.script \
 	rootfs/etc/udhcpd.conf rootfs/etc/inetd.conf \
 	rootfs/usr/lib rootfs/usr/games rootfs/usr/share/doc \
