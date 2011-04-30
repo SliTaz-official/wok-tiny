@@ -119,6 +119,7 @@ genpkg_rules()
 	done
     done
     chown 0.0 rootfs/lib/*
+    sed -i 's/UDEV=.*/UDEV="no"/;s/hwconf.sh l/l/' rootfs/etc/rcS.conf
     rm -rf rootfs/tmp rootfs/var/games rootfs/var/cache \
 	rootfs/bin/bootlog rootfs/etc/modprobe.d rootfs/home \
 	rootfs/sbin/mktazdevs.sh rootfs/usr/bin/man \
