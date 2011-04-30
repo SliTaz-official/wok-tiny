@@ -120,6 +120,8 @@ show)	for i in $(GET show | sed 's/,/ /g'); do
 EOT
 		case "$i" in
 		/etc/ppp*)	cat $i ;;
+		*boot.log)	sed -e s'/\[^Gm]*.//g' \
+		    -e ':a;s/^\(.\{1,68\}\)\(\[ [A-Za-z]* \]\)/\1 \2/;ta' $i ;;
 		*)		su -c "cat $i" tux ;;
 		esac
 		cat <<EOT
