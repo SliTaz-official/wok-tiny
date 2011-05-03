@@ -33,6 +33,7 @@ slitaz-boot-scripts	/etc/network.conf
 slitaz-boot-scripts	/etc/init.d/local.sh
 slitaz-boot-scripts	/etc/rcS.conf
 EOT
+	sed -i 's/UDEV=.*/UDEV="no"/;s/hwconf.sh l/l/' fs/etc/rcS.conf
 }
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
