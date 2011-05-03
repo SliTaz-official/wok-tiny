@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux/i386 2.6.37 Kernel Configuration
-# Fri Feb  4 17:59:29 2011
+# Tue May  3 12:16:19 2011
 #
 # CONFIG_64BIT is not set
 CONFIG_X86_32=y
@@ -113,7 +113,6 @@ CONFIG_INITRAMFS_ROOT_GID=0
 CONFIG_RD_LZMA=y
 # CONFIG_RD_LZO is not set
 CONFIG_INITRAMFS_COMPRESSION_NONE=y
-# CONFIG_INITRAMFS_COMPRESSION_GZIP is not set
 # CONFIG_INITRAMFS_COMPRESSION_LZMA is not set
 CONFIG_CC_OPTIMIZE_FOR_SIZE=y
 CONFIG_SYSCTL=y
@@ -781,7 +780,7 @@ CONFIG_JBD=y
 # CONFIG_XFS_FS is not set
 # CONFIG_BTRFS_FS is not set
 # CONFIG_NILFS2_FS is not set
-# CONFIG_FILE_LOCKING is not set
+CONFIG_FILE_LOCKING=y
 # CONFIG_FSNOTIFY is not set
 # CONFIG_DNOTIFY is not set
 # CONFIG_INOTIFY_USER is not set
