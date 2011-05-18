@@ -67,6 +67,7 @@ config_form()
 <td><select name="MODE">
 	<option value="STATIC">STATIC</option>
 	<option value="DHCP"$([ "$MODE" == "DHCP" ] && echo ' selected="selected"')>DHCP</option>
+	<option value="DISABLE">DISABLE</option>
 </select></td>
 </tr>
 <tr>
@@ -107,6 +108,8 @@ post_install()
 	STATIC="yes"
 	case "$MODE" in
 	"")	return 1;;
+	DISABLE)
+		STATIC="no" ;;
 	DHCP)	DHCP="yes"
 		STATIC="no"
 	esac
