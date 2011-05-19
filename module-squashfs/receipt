@@ -5,7 +5,7 @@ VERSION="2.6.37"
 CATEGORY="base-system"
 SHORT_DESC="Kernel module for the squashfs filesystem"
 MAINTAINER="pascal.bellard@slitaz.org"
-WEB_SITE="http://mirror.slitaz.org/pizza/tiny/"
+WEB_SITE="http://tiny.slitaz.org/"
 WANTED="kernel-modular"
 CONFIG_FILES="/etc/filesystems"
 
