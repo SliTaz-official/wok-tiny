@@ -75,7 +75,7 @@ local cnt
 names=""
 IFS="&"
 for i in $2 ; do
-	var=${i%%=*}
+	var=${i%%[^A-Za-z_0-9]*}
 	case " $names " in
 	*\ $var\ *)	eval cnt=\$${1}_${var}_count ;;
 	*)		cnt=0
@@ -122,8 +122,9 @@ if [ "$REQUEST_METHOD$POST__NAMES" == "POST" ]; then
 	n=1
 	cat > ${post}0
 	read delim < ${post}0
+	delim=${delim%?}
 	case "$delim" in
-	-*)	awk "/${delim%?}/ { o+=index(\$0,\"$delim\")-1; print o }
+	-*)	awk "/$delim/ { o+=index(\$0,\"$delim\")-1; print o }
 	   		  { o+=1+length() }" < ${post}0 | while read offset; do
 		    if [ $offset -ne 0 ]; then
 			ddcut $last $offset < ${post}0 > $post$n 2> /dev/null
@@ -140,6 +141,7 @@ if [ "$REQUEST_METHOD$POST__NAMES" == "POST" ]; then
 			case "$line" in
 			*Content-Disposition*)
 			    name=$(echo $line | sed 's/.* name="\([^"]*\)".*$/\1/')
+			    name=${name%%[^A-Za-z_0-9]*}
 			    case "$line" in
 			    *filename=*) filename=$(echo $line | sed 's/.* filename="\([^"]*\)".*$/\1/') ;;
 			    esac ;;
@@ -156,13 +158,16 @@ if [ "$REQUEST_METHOD$POST__NAMES" == "POST" ]; then
 				eval FILE_${name}_size=$(stat -c %s $tmp)
 				eval FILE_${name}_type=$type
 			    elif [ -n "$name" ]; then
-				eval var=\$POST_${name}
+			        eval cnt=\$POST_${name}_count
+			        cnt=$(($cnt + 1))
+				eval var=\$POST_${name}_$cnt
 				while read line; do
 					[ -n "$var" ] && var="$var
 "
-					var="$line"
+					var="$var$line"
 				done
-				eval POST_${name}="\$var"
+				eval POST_${name}_$cnt="\$var"
+				eval POST_${name}_count=$cnt
 				case " $POST__NAMES " in
 				*\ $name\ *) ;;
 				*) POST__NAMES="$POST__NAMES $name"
