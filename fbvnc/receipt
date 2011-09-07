@@ -1,0 +1,63 @@
+# SliTaz package receipt.
+
+PACKAGE="fbvnc"
+VERSION="20110416"
+CATEGORY="network"
+SHORT_DESC="VNC client in frame buffer."
+MAINTAINER="pascal.bellard@slitaz.org"
+WEB_SITE="http://repo.or.cz/w/fbvnc.git"
+TARBALL="$PACKAGE-$VERSION.tar.gz"
+[ -n "$TARGET" ] || TARGET="i486"
+BUILD_DEPENDS="uclibc-cross-compiler-$TARGET"
+DEPENDS="base-tiny"
+
+# Rules to configure and make the package.
+compile_rules()
+{
+	[ -s $SOURCES_REPOSITORY/$TARBALL ] || 
+	  wget -O $SOURCES_REPOSITORY/$TARBALL \
+	   $WEB_SITE/snapshot/e42bc02b14b3331e7c7f45c6b42179d0af99ed7b.tar.gz
+	tar xzf $SOURCES_REPOSITORY/$TARBALL
+	mv $PACKAGE $src
+	cd $src
+	sed -i "s/^CC.*/CC = uclibc-$TARGET-gcc/" Makefile
+	make && uclibc-$TARGET-strip fbvnc
+}
+
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	mkdir -p $fs/usr/bin
+	cp $src/fbvnc $fs/usr/bin
+}
+
+config_form()
+{
+	CHECKED=" checked=checked"
+	[ "$START" == "on" ] || CHECKED=""
+	[ -n "$PORT" ] || PORT=5900
+	cat <<EOT
+<table>
+<tr>
+<td>Autostart</td>
+<td><input type="checkbox"$CHECKED name="START"></td>
+</tr>
+<tr>
+<td>Server</td>
+<td><input type="text" name="SERVER"></td>
+</tr>
+<tr>
+<td>Port</td>
+<td><input type="text" name="PORT" value="$PORT"></td>
+</tr>
+</table>
+EOT
+}
+
+post_install()
+{
+	[ "$START" == "on" ] && cat >> $1/etc/init.d/local.sh <<EOT
+fbvnc $SERVER $PORT &
+EOT
+}
