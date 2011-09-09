@@ -36,7 +36,7 @@ genpkg_rules()
 config_form()
 {
 	case "$START" in
-	no|yes) ;;
+	no|yes|ask) ;;
 	*) START="cmdline" ;;
 	esac
 	[ -n "$PORT" ] || PORT=5900
@@ -47,6 +47,7 @@ config_form()
 <td>
 <input type="radio" name="START" $([ "$START" == "no" ] && echo "checked=checked ")value="no"> never
 <input type="radio" name="START" $([ "$START" == "yes" ] && echo "checked=checked ")value="yes"> always
+<input type="radio" name="START" $([ "$START" == "ask" ] && echo "checked=checked ")value="ask"> ask during boot
 <input type="radio" name="START" $([ "$START" == "cmdline" ] && echo "checked=checked ")value="cmdline"> with kernel argument 'fbvnc=server:port'
 </td>
 </tr>
@@ -64,16 +65,30 @@ EOT
 
 post_install()
 {
-	[ "$START" == "on" ] && cat >> $1/etc/init.d/local.sh <<EOT
-fbvnc $SERVER $PORT &
+	case "$START" in
+	on)	cat >> $1/etc/init.d/local.sh <<EOT
+sed -i "s|tty1:.*|tty1::respawn:/usr/bin/fbvnc $SERVER $PORT|" /etc/inittab
+kill -1 1
 EOT
-	[ "$START" == "cmdline" ] && cat >> $1/etc/init.d/local.sh <<EOT
+		;;
+	ask)	cat >> $1/etc/init.d/local.sh <<EOT
+echo -n "VNC server to connect (example: 192.168.0.123 5900): "
+read -t 30 SERVER
+[ -n "\$SERVER" ] &&
+sed -i "s|tty1:.*|tty1::respawn:/usr/bin/fbvnc \$SERVER|" /etc/inittab
+kill -1 1
+EOT
+		;;
+	cmdline) cat >> $1/etc/init.d/local.sh <<EOT
 for i in \$(cat /proc/cmdline); do
     case "\$i" in
     fbvnc=*)
 	i=\${i#fbvnc=}
-	fbvnc \${i/:/ } &
+	sed -i "s|tty1:.*|tty1::respawn:/usr/bin/fbvnc \${i/:/ }|" /etc/inittab
+	kill -1 1
     esac
 done
 EOT
+		;;
+	esac
 }
