@@ -21,6 +21,7 @@ compile_rules()
 	mv $PACKAGE $src
 	cd $src
 	sed -i "s/^CC.*/CC = uclibc-$TARGET-gcc/" Makefile
+	patch -p0 < ../stuff/fbvnc.u &&
 	make && uclibc-$TARGET-strip fbvnc
 }
 
@@ -34,21 +35,27 @@ genpkg_rules()
 
 config_form()
 {
-	CHECKED=" checked=checked"
-	[ "$START" == "on" ] || CHECKED=""
+	case "$START" in
+	no|yes) ;;
+	*) START="cmdline" ;;
+	esac
 	[ -n "$PORT" ] || PORT=5900
 	cat <<EOT
 <table>
 <tr>
 <td>Autostart</td>
-<td><input type="checkbox"$CHECKED name="START"></td>
+<td>
+<input type="radio" name="START" $([ "$START" == "no" ] && echo "checked=checked ")value="no"> never
+<input type="radio" name="START" $([ "$START" == "yes" ] && echo "checked=checked ")value="yes"> always
+<input type="radio" name="START" $([ "$START" == "cmdline" ] && echo "checked=checked ")value="cmdline"> with kernel argument 'fbvnc=server:port'
+</td>
 </tr>
 <tr>
-<td>Server</td>
+<td>Default server</td>
 <td><input type="text" name="SERVER"></td>
 </tr>
 <tr>
-<td>Port</td>
+<td>Default port</td>
 <td><input type="text" name="PORT" value="$PORT"></td>
 </tr>
 </table>
@@ -59,5 +66,14 @@ post_install()
 {
 	[ "$START" == "on" ] && cat >> $1/etc/init.d/local.sh <<EOT
 fbvnc $SERVER $PORT &
+EOT
+	[ "$START" == "cmdline" ] && cat >> $1/etc/init.d/local.sh <<EOT
+for i in \$(cat /proc/cmdline); do
+    case "\$i" in
+    fbvnc=*)
+	i=\${i#fbvnc=}
+	fbvnc \${i/:/ } &
+    esac
+done
 EOT
 }

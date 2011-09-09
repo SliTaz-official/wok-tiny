@@ -1,0 +1,69 @@
+--- fbvnc.c
++++ fbvnc.c
+@@ -62,7 +62,7 @@
+ 	if (connect(fd, addrinfo->ai_addr, addrinfo->ai_addrlen) == -1) {
+ 		close(fd);
+ 		freeaddrinfo(addrinfo);
+-		return -1;
++		return -2;
+ 	}
+ 	freeaddrinfo(addrinfo);
+ 	return fd;
+@@ -89,11 +89,7 @@
+ 	read(fd, &serverinit, sizeof(serverinit));
+ 
+ 	if (fb_init())
+-		return -1;
+-	if (FBM_BPP(fb_mode()) != sizeof(fbval_t)) {
+-		fprintf(stderr, "fbvnc: fbval_t doesn't match fb depth\n");
+-		exit(1);
+-	}
++		return -2;
+ 	cols = MIN(ntohs(serverinit.w), fb_cols());
+ 	rows = MIN(ntohs(serverinit.h), fb_rows());
+ 	mr = rows / 2;
+@@ -139,14 +135,16 @@
+ static void drawfb(char *s, int x, int y, int w, int h)
+ {
+ 	fbval_t slice[1 << 14];
+-	int i, j;
++	int i, j, k;
++	int mode = FBM_BPP(fb_mode());
+ 	for (i = 0; i < h; i++) {
+-		for (j = 0; j < w; j++) {
++		for (j = k = 0; j < w; j++, k += mode) {
+ 			int c = *(unsigned char *) &s[i * w + j];
+ 			int r = (c & 0x3) << 6;
+ 			int g = ((c >> 2) & 0x7) << 5;
+ 			int b = ((c >> 5) & 0x7) << 5;
+-			slice[j] = FB_VAL(r, g, b);
++			unsigned char *byte = (unsigned char *) slice;
++			* (fbval_t *) (byte + k) = FB_VAL(r, g, b);
+ 		}
+ 		fb_set(y + i, x, slice, w);
+ 	}
+@@ -380,17 +378,19 @@
+ 	char *port = VNC_PORT;
+ 	char *host = "127.0.0.1";
+ 	struct termios ti;
+-	int vnc_fd, rat_fd;
++	int vnc_fd, rat_fd, status;
+ 	if (argc >= 2)
+ 		host = argv[1];
+ 	if (argc >= 3)
+ 		port = argv[2];
+-	if ((vnc_fd = vnc_connect(host, port)) == -1) {
+-		fprintf(stderr, "could not connect!\n");
++	if ((vnc_fd = vnc_connect(host, port)) < 0) {
++		fprintf(stderr, "could not connect! %s %s %d\n",
++			host,port,vnc_fd);
+ 		return 1;
+ 	}
+-	if (vnc_init(vnc_fd) == -1) {
+-		fprintf(stderr, "vnc init failed!\n");
++	status = vnc_init(vnc_fd);
++	if (status < 0) {
++		fprintf(stderr, "vnc init failed! %d\n", status);
+ 		return 1;
+ 	}
+ 	term_setup(&ti);
