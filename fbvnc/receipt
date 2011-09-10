@@ -78,7 +78,7 @@ post_install()
 {
 	case "$START" in
 	on)	cat >> $1/etc/init.d/local.sh <<EOT
-sed -i "s|tty1:.*|tty1::respawn:/usr/bin/fbvnc $SERVER $PORT|" /etc/inittab
+sed -i "s|tty1:.*|tty1::respawn:/usr/bin/fbvnc -bpp $BPP $SERVER $PORT|" /etc/inittab
 kill -1 1
 EOT
 		;;
@@ -86,7 +86,7 @@ EOT
 echo -n "VNC server to connect (example: 192.168.0.123 5900): "
 read -t 30 SERVER
 [ -n "\$SERVER" ] &&
-sed -i "s|tty1:.*|tty1::respawn:/usr/bin/fbvnc \$SERVER|" /etc/inittab
+sed -i "s|tty1:.*|tty1::respawn:/usr/bin/fbvnc -bpp $BPP \$SERVER|" /etc/inittab
 kill -1 1
 EOT
 		;;
@@ -95,7 +95,7 @@ for i in \$(cat /proc/cmdline); do
     case "\$i" in
     fbvnc=*)
 	i=\${i#fbvnc=}
-	sed -i "s|tty1:.*|tty1::respawn:/usr/bin/fbvnc \${i/:/ }|" /etc/inittab
+	sed -i "s|tty1:.*|tty1::respawn:/usr/bin/fbvnc -bpp $BPP \${i/:/ }|" /etc/inittab
 	kill -1 1
     esac
 done
