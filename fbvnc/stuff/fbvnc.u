@@ -100,7 +100,7 @@
  static int mr, mc;		/* mouse position */
  
  static char buf[MAXRES];
-@@ -62,15 +63,18 @@
+@@ -62,15 +63,22 @@
  	if (connect(fd, addrinfo->ai_addr, addrinfo->ai_addrlen) == -1) {
  		close(fd);
  		freeaddrinfo(addrinfo);
@@ -111,16 +111,20 @@
  	return fd;
  }
  
++static int bpp, Bpp;
 +static struct rgb_conv format;
  static int vnc_init(int fd)
  {
++	static struct { int bpp, fmt; } fmt[] = {
++		{ 32, 0x0888 },  { 16, 0x0565 },  { 8, 0x0233 }, { -1, 0 }
++	};
  	char vncver[] = "RFB 003.003\n";
 +	int i;
 +
  	struct vnc_client_init clientinit;
  	struct vnc_server_init serverinit;
  	struct vnc_client_pixelfmt pixfmt_cmd;
-@@ -88,68 +92,66 @@
+@@ -88,68 +96,71 @@
  	write(fd, &clientinit, sizeof(clientinit));
  	read(fd, &serverinit, sizeof(serverinit));
  
@@ -149,21 +153,28 @@
 -	pixfmt_cmd.format.depth = 8;
  	pixfmt_cmd.format.bigendian = 0;
  	pixfmt_cmd.format.truecolor = 1;
- 
+-
 -	pixfmt_cmd.format.rmax = htons(3);
 -	pixfmt_cmd.format.gmax = htons(7);
 -	pixfmt_cmd.format.bmax = htons(7);
-+	pixfmt_cmd.format.bpp = pixfmt_cmd.format.depth = 8;
-+	fill_rgb_conv(0x0233, &format);
++	if (bpp < 0) bpp = 0;
++	if (bpp >= 24) bpp = 32;
++	i = 0; do {
++		pixfmt_cmd.format.bpp =
++		pixfmt_cmd.format.depth = fmt[i].bpp;
++		fill_rgb_conv(fmt[i].fmt, &format);
++	} while (bpp <= fmt[++i].bpp);
++	Bpp = pixfmt_cmd.format.bpp / 8;
++
 +	pixfmt_cmd.format.rmax = htons(format.rmax);
 +	pixfmt_cmd.format.gmax = htons(format.gmax);
 +	pixfmt_cmd.format.bmax = htons(format.bmax);
  	pixfmt_cmd.format.rshl = 0;
 -	pixfmt_cmd.format.gshl = 2;
 -	pixfmt_cmd.format.bshl = 5;
+-
 +	pixfmt_cmd.format.gshl = format.gshr;
 +	pixfmt_cmd.format.bshl = format.bshr;
- 
  	write(fd, &pixfmt_cmd, sizeof(pixfmt_cmd));
  	return fd;
  }
@@ -196,7 +207,7 @@
 -static void drawfb(char *s, int x, int y, int w, int h)
 +static void drawfb(char *s, int x, int y, int w)
  {
- 	fbval_t slice[1 << 14];
+-	fbval_t slice[1 << 14];
 -	int i, j;
 -	for (i = 0; i < h; i++) {
 -		for (j = 0; j < w; j++) {
@@ -207,10 +218,11 @@
 -			slice[j] = FB_VAL(r, g, b);
 -		}
 -		fb_set(y + i, x, slice, w);
++	fbval_t slice[MAXRES];
 +	int j, k;
 +	int mode = FBM_BPP(fb_mode());
-+	for (j = k = 0; j < w; j++, k += mode) {
-+		int c = *(unsigned *) &s[j];
++	for (j = k = 0; j < w; j++, k += mode, s += Bpp) {
++		fbval_t c = * (fbval_t *) s;
 +		int r = (c & format.rmax) << format.rskp;
 +		int g = ((c >> format.gshr) & format.gmax) << format.gskp;
 +		int b = ((c >> format.bshr) & format.bmax) << format.bskp;
@@ -221,7 +233,7 @@
  }
  
  static void xread(int fd, void *buf, int len)
-@@ -181,18 +183,32 @@
+@@ -181,18 +192,37 @@
  		xread(fd, msg + 1, sizeof(*fbup) - 1);
  		n = ntohs(fbup->n);
  		for (j = 0; j < n; j++) {
@@ -234,12 +246,16 @@
  			w = ntohs(uprect.w);
  			h = ntohs(uprect.h);
 -			if (x >= cols || x + w > cols)
-+			if (w > MAXRES) {
-+				fprintf(stderr,"too much pixels: %d, max %d\n",
-+					w, MAXRES);
++			if (ntohl(uprect.enc) != 0) {
++				fprintf(stderr,"Encoding not RAW: %d\n",
++					ntohl(uprect.enc));
  				return -1;
 -			if (y >= rows || y + h > rows)
--				return -1;
++			}
++			if (w * Bpp > MAXRES) {
++				fprintf(stderr,"too much pixels: %dx%d, max %d\n",
++					w, Bpp, MAXRES);
+ 				return -1;
 -			xread(fd, buf, w * h);
 -			drawfb(buf, x, y, w, h);
 +			}
@@ -249,10 +265,10 @@
 +			l = MIN(w, cols - x);
 +			if (x < 0) {
 +				l = MIN(w + x, cols);
-+				p -= x;
++				p -= x * Bpp;
 +				x = 0;
 +			}
-+			for (; h--; y++) {
++			for (w *= Bpp; h--; y++) {
 +				xread(fd, buf, w);
 +				if (y >= 0 && y < rows && l > 0)
 +					drawfb(p, x, y, l);
@@ -260,7 +276,7 @@
  		}
  		break;
  	case VNC_SERVER_BELL:
-@@ -217,12 +233,31 @@
+@@ -217,12 +247,31 @@
  	char ie[3];
  	struct vnc_client_ratevent me = {VNC_CLIENT_RATEVENT};
  	int mask = 0;
@@ -294,7 +310,7 @@
  	if (ie[0] & 0x01)
  		mask |= VNC_BUTTON1_MASK;
  	if (ie[0] & 0x04)
-@@ -233,6 +268,8 @@
+@@ -233,6 +282,8 @@
  	me.x = htons(mc);
  	me.mask = mask;
  	write(fd, &me, sizeof(me));
@@ -303,7 +319,7 @@
  	return 0;
  }
  
-@@ -292,12 +329,11 @@
+@@ -292,12 +343,11 @@
  			k = 0xff0d;
  			break;
  		case 0x0c:	/* ^L: redraw */
@@ -318,7 +334,7 @@
  			mod[nmod++] = 0xffe1;
  		if (k >= 1 && k <= 26) {
  			k = 'a' + k - 1;
-@@ -339,7 +375,7 @@
+@@ -339,7 +389,7 @@
  	write(STDIN_FILENO, show, strlen(show));
  }
  
@@ -327,7 +343,7 @@
  {
  	struct pollfd ufds[3];
  	int pending = 0;
-@@ -350,29 +386,31 @@
+@@ -350,29 +400,31 @@
  	ufds[1].events = POLLIN;
  	ufds[2].fd = rat_fd;
  	ufds[2].events = POLLIN;
@@ -363,7 +379,7 @@
  }
  
  int main(int argc, char * argv[])
-@@ -380,27 +418,34 @@
+@@ -380,27 +432,38 @@
  	char *port = VNC_PORT;
  	char *host = "127.0.0.1";
  	struct termios ti;
@@ -371,9 +387,13 @@
 +	int vnc_fd, rat_fd, status;
 +	
 +	if (argc < 2) {
-+		fprintf(stderr, "Usage : fbvnc server [port]\n");
++		fprintf(stderr, "Usage : fbvnc [-bpp bits] server [port]\n");
 +		return 0;
 +  	}
++  	if (*argv[1] == '-' && argc >= 3) {
++  		argc -= 2; argv += 2;
++  		bpp = atoi(argv[0]);
++  	} 
  	if (argc >= 2)
  		host = argv[1];
  	if (argc >= 3)

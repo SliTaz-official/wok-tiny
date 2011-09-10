@@ -39,6 +39,10 @@ config_form()
 	no|yes|ask) ;;
 	*) START="cmdline" ;;
 	esac
+	case "$BPP" in
+	16|24|32) ;;
+	*) BPP=8 ;;
+	esac
 	[ -n "$PORT" ] || PORT=5900
 	cat <<EOT
 <table>
@@ -49,6 +53,13 @@ config_form()
 <input type="radio" name="START" $([ "$START" == "yes" ] && echo "checked=checked ")value="yes"> always
 <input type="radio" name="START" $([ "$START" == "ask" ] && echo "checked=checked ")value="ask"> ask during boot
 <input type="radio" name="START" $([ "$START" == "cmdline" ] && echo "checked=checked ")value="cmdline"> with kernel argument 'fbvnc=server:port'
+</td>
+</tr>
+<tr>
+<td>Bits per pixel</td>
+<input type="radio" name="BPP" $([ "$BPP" == "8" ] && echo "checked=checked ")value="8"> 8
+<input type="radio" name="BPP" $([ "$BPP" == "16" ] && echo "checked=checked ")value="16"> 16
+<input type="radio" name="BPP" $([ "$BPP" == "32" ] && echo "checked=checked ")value="32"> 32
 </td>
 </tr>
 <tr>
