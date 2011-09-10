@@ -40,8 +40,8 @@ config_form()
 	*) START="cmdline" ;;
 	esac
 	case "$BPP" in
-	16|24|32) ;;
-	*) BPP=8 ;;
+	8|24|32) ;;
+	*) BPP=16 ;;
 	esac
 	[ -n "$PORT" ] || PORT=5900
 	cat <<EOT
@@ -56,6 +56,7 @@ config_form()
 </td>
 </tr>
 <tr>
+<td>
 <td>Bits per pixel</td>
 <input type="radio" name="BPP" $([ "$BPP" == "8" ] && echo "checked=checked ")value="8"> 8
 <input type="radio" name="BPP" $([ "$BPP" == "16" ] && echo "checked=checked ")value="16"> 16
