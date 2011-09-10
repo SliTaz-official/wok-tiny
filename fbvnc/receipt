@@ -20,9 +20,9 @@ compile_rules()
 	tar xzf $SOURCES_REPOSITORY/$TARBALL
 	mv $PACKAGE $src
 	cd $src
-	sed -i "s/^CC.*/CC = uclibc-$TARGET-gcc/" Makefile
+	sed -i "s/^CC.*/CC = uclibc-$TARGET-gcc/;s/^LDFLAGS.*/& -s/" Makefile
 	patch -p0 < ../stuff/fbvnc.u &&
-	make && uclibc-$TARGET-strip fbvnc
+	make
 }
 
 

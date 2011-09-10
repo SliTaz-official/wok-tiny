@@ -1,6 +1,106 @@
+--- draw.h
++++ draw.h
+@@ -15,5 +15,11 @@
+ void fb_cmap(void);
+ 
+ /* helper functions */
++struct rgb_conv {
++	int rshl, gshl, bshr, gshr;
++	int rskp, gskp, bskp;
++	int rmax, gmax, bmax;
++};
++void fill_rgb_conv(int mode, struct rgb_conv *s);
+ void fb_set(int r, int c, void *mem, int len);
+ unsigned fb_val(int r, int g, int b);
+--- draw.c
++++ draw.c
+@@ -72,11 +72,14 @@
+ 
+ int fb_init(void)
+ {
++	int err = 1;
+ 	fd = open(FBDEV_PATH, O_RDWR);
+ 	if (fd == -1)
+ 		goto failed;
++	err++;
+ 	if (ioctl(fd, FBIOGET_VSCREENINFO, &vinfo) == -1)
+ 		goto failed;
++	err++;
+ 	if (ioctl(fd, FBIOGET_FSCREENINFO, &finfo) == -1)
+ 		goto failed;
+ 	fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
+@@ -85,6 +88,7 @@
+ 	ng = 1 << vinfo.blue.length;
+ 	nb = 1 << vinfo.green.length;
+ 	fb = mmap(NULL, fb_len(), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
++	err++;
+ 	if (fb == MAP_FAILED)
+ 		goto failed;
+ 	fb_cmap_save(1);
+@@ -93,7 +97,7 @@
+ failed:
+ 	perror("fb_init()");
+ 	close(fd);
+-	return 1;
++	return err;
+ }
+ 
+ void fb_free(void)
+@@ -123,16 +127,27 @@
+ 	memcpy(fb_mem(r) + (c + vinfo.xoffset) * bpp, mem, len * bpp);
+ }
+ 
++void fill_rgb_conv(int mode, struct rgb_conv *s)
++{
++	int bits;
++
++	bits = mode & 0xF;  mode >>= 4;
++	s->rshl = s->gshl = bits;
++	s->bskp = 8 - bits; s->bmax = (1 << bits) -1;
++	bits = mode & 0xF;  mode >>= 4;
++	s->rshl += bits; s->bshr = bits;
++	s->gskp = 8 - bits; s->gmax = (1 << bits) -1;
++	bits = mode & 0xF;
++	s->bshr += s->gshr = bits;
++	s->rskp = 8 - bits; s->rmax = (1 << bits) -1;
++}
++
+ unsigned fb_val(int r, int g, int b)
+ {
+-	switch (fb_mode() & 0x0fff) {
+-	default:
+-		fprintf(stderr, "fb_val: unknown fb_mode()\n");
+-	case 0x0888:
+-		return (r << 16) | (g << 8) | b;
+-	case 0x0565:
+-		return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+-	case 0x0233:
+-		return ((r >> 6) << 6) | ((g >> 5) << 3) | (b >> 5);
+-	}
++	static struct rgb_conv c;
++	
++	if (c.rshl == 0)
++		fill_rgb_conv(fb_mode(), &c);
++	return ((r >> c.rskp) << c.rshl) | ((g >> c.gskp) << c.gshl) 
++					 | (b >> c.bskp);
+ }
 --- fbvnc.c
 +++ fbvnc.c
-@@ -62,7 +62,7 @@
+@@ -36,10 +36,11 @@
+ 
+ #define VNC_PORT		"5900"
+ 
+-#define MAXRES			(1 << 21)
+-#define MIN(a, b)		((a) < (b) ? (a) : (b))
++#define MAXRES			(1 << 14)
+ 
+ static int cols, rows;
++static int srv_cols, srv_rows;
++static int or, oc;
+ static int mr, mc;		/* mouse position */
+ 
+ static char buf[MAXRES];
+@@ -62,15 +63,18 @@
  	if (connect(fd, addrinfo->ai_addr, addrinfo->ai_addrlen) == -1) {
  		close(fd);
  		freeaddrinfo(addrinfo);
@@ -9,45 +109,271 @@
  	}
  	freeaddrinfo(addrinfo);
  	return fd;
-@@ -89,11 +89,7 @@
+ }
+ 
++static struct rgb_conv format;
+ static int vnc_init(int fd)
+ {
+ 	char vncver[] = "RFB 003.003\n";
++	int i;
++
+ 	struct vnc_client_init clientinit;
+ 	struct vnc_server_init serverinit;
+ 	struct vnc_client_pixelfmt pixfmt_cmd;
+@@ -88,68 +92,66 @@
+ 	write(fd, &clientinit, sizeof(clientinit));
  	read(fd, &serverinit, sizeof(serverinit));
  
- 	if (fb_init())
+-	if (fb_init())
 -		return -1;
 -	if (FBM_BPP(fb_mode()) != sizeof(fbval_t)) {
 -		fprintf(stderr, "fbvnc: fbval_t doesn't match fb depth\n");
 -		exit(1);
 -	}
-+		return -2;
- 	cols = MIN(ntohs(serverinit.w), fb_cols());
- 	rows = MIN(ntohs(serverinit.h), fb_rows());
+-	cols = MIN(ntohs(serverinit.w), fb_cols());
+-	rows = MIN(ntohs(serverinit.h), fb_rows());
++	i = fb_init();
++	if (i)
++		return -1 - i;
++	srv_cols = ntohs(serverinit.w);
++	srv_rows = ntohs(serverinit.h);
++	cols = MIN(srv_cols, fb_cols());
++	rows = MIN(srv_rows, fb_rows());
  	mr = rows / 2;
-@@ -139,14 +135,16 @@
- static void drawfb(char *s, int x, int y, int w, int h)
+ 	mc = cols / 2;
++	or = oc = 0;
+ 
+ 	read(fd, buf, ntohl(serverinit.len));
+ 	pixfmt_cmd.type = VNC_CLIENT_PIXFMT;
+-	pixfmt_cmd.format.bpp = 8;
+-	pixfmt_cmd.format.depth = 8;
+ 	pixfmt_cmd.format.bigendian = 0;
+ 	pixfmt_cmd.format.truecolor = 1;
+ 
+-	pixfmt_cmd.format.rmax = htons(3);
+-	pixfmt_cmd.format.gmax = htons(7);
+-	pixfmt_cmd.format.bmax = htons(7);
++	pixfmt_cmd.format.bpp = pixfmt_cmd.format.depth = 8;
++	fill_rgb_conv(0x0233, &format);
++	pixfmt_cmd.format.rmax = htons(format.rmax);
++	pixfmt_cmd.format.gmax = htons(format.gmax);
++	pixfmt_cmd.format.bmax = htons(format.bmax);
+ 	pixfmt_cmd.format.rshl = 0;
+-	pixfmt_cmd.format.gshl = 2;
+-	pixfmt_cmd.format.bshl = 5;
++	pixfmt_cmd.format.gshl = format.gshr;
++	pixfmt_cmd.format.bshl = format.bshr;
+ 
+ 	write(fd, &pixfmt_cmd, sizeof(pixfmt_cmd));
+ 	return fd;
+ }
+ 
+-static int vnc_free(void)
++static void vnc_free(void)
+ {
+ 	fb_free();
+-	return 0;
+ }
+ 
+-static int vnc_refresh(int fd, int inc)
++static void vnc_refresh(int fd, int inc)
+ {
+ 	struct vnc_client_fbup fbup_req;
+ 	fbup_req.type = VNC_CLIENT_FBUP;
+ 	fbup_req.inc = inc;
+-	fbup_req.x = htons(0);
+-	fbup_req.y = htons(0);
+-	fbup_req.w = htons(cols);
+-	fbup_req.h = htons(rows);
++	fbup_req.x = htons(oc);
++	fbup_req.y = htons(or);
++	fbup_req.w = htons(oc + cols);
++	fbup_req.h = htons(or + rows);
+ 	write(fd, &fbup_req, sizeof(fbup_req));
+-	return 0;
+ }
+ 
+-static void drawfb(char *s, int x, int y, int w, int h)
++static void drawfb(char *s, int x, int y, int w)
  {
  	fbval_t slice[1 << 14];
 -	int i, j;
-+	int i, j, k;
-+	int mode = FBM_BPP(fb_mode());
- 	for (i = 0; i < h; i++) {
+-	for (i = 0; i < h; i++) {
 -		for (j = 0; j < w; j++) {
-+		for (j = k = 0; j < w; j++, k += mode) {
- 			int c = *(unsigned char *) &s[i * w + j];
- 			int r = (c & 0x3) << 6;
- 			int g = ((c >> 2) & 0x7) << 5;
- 			int b = ((c >> 5) & 0x7) << 5;
+-			int c = *(unsigned char *) &s[i * w + j];
+-			int r = (c & 0x3) << 6;
+-			int g = ((c >> 2) & 0x7) << 5;
+-			int b = ((c >> 5) & 0x7) << 5;
 -			slice[j] = FB_VAL(r, g, b);
-+			unsigned char *byte = (unsigned char *) slice;
-+			* (fbval_t *) (byte + k) = FB_VAL(r, g, b);
- 		}
- 		fb_set(y + i, x, slice, w);
+-		}
+-		fb_set(y + i, x, slice, w);
++	int j, k;
++	int mode = FBM_BPP(fb_mode());
++	for (j = k = 0; j < w; j++, k += mode) {
++		int c = *(unsigned *) &s[j];
++		int r = (c & format.rmax) << format.rskp;
++		int g = ((c >> format.gshr) & format.gmax) << format.gskp;
++		int b = ((c >> format.bshr) & format.bmax) << format.bskp;
++		unsigned char *byte = (unsigned char *) slice;
++		* (fbval_t *) (byte + k) = FB_VAL(r, g, b);
  	}
-@@ -380,17 +378,19 @@
++	fb_set(y, x, slice, w);
+ }
+ 
+ static void xread(int fd, void *buf, int len)
+@@ -181,18 +183,32 @@
+ 		xread(fd, msg + 1, sizeof(*fbup) - 1);
+ 		n = ntohs(fbup->n);
+ 		for (j = 0; j < n; j++) {
+-			int x, y, w, h;
++			int x, y, w, h, l;
++			char *p;
+ 			xread(fd, &uprect, sizeof(uprect));
+ 			x = ntohs(uprect.x);
+ 			y = ntohs(uprect.y);
+ 			w = ntohs(uprect.w);
+ 			h = ntohs(uprect.h);
+-			if (x >= cols || x + w > cols)
++			if (w > MAXRES) {
++				fprintf(stderr,"too much pixels: %d, max %d\n",
++					w, MAXRES);
+ 				return -1;
+-			if (y >= rows || y + h > rows)
+-				return -1;
+-			xread(fd, buf, w * h);
+-			drawfb(buf, x, y, w, h);
++			}
++			p = buf;
++			x -= oc;
++			y -= or;
++			l = MIN(w, cols - x);
++			if (x < 0) {
++				l = MIN(w + x, cols);
++				p -= x;
++				x = 0;
++			}
++			for (; h--; y++) {
++				xread(fd, buf, w);
++				if (y >= 0 && y < rows && l > 0)
++					drawfb(p, x, y, l);
++			}
+ 		}
+ 		break;
+ 	case VNC_SERVER_BELL:
+@@ -217,12 +233,31 @@
+ 	char ie[3];
+ 	struct vnc_client_ratevent me = {VNC_CLIENT_RATEVENT};
+ 	int mask = 0;
++	int refresh = 2;
+ 	if (read(ratfd, &ie, sizeof(ie)) != 3)
+ 		return -1;
+ 	mc += ie[1];
+ 	mr -= ie[2];
+-	mc = MAX(0, MIN(cols - 1, mc));
+-	mr = MAX(0, MIN(rows - 1, mr));
++	if (mc < oc) {
++		if ((oc -= cols / 5) < 0)
++			oc = 0;
++	}
++	else if (mc >= oc + cols && oc + cols < srv_cols) {
++		if ((oc += cols / 5) > srv_cols - cols)
++			oc = srv_cols - cols;
++	}
++	else refresh--;
++	if (mr < or) {
++		if ((or -= rows / 5) < 0)
++			or = 0;
++	}
++	else if (mr >= or + rows && or + rows < srv_rows) {
++		if ((or += rows / 5) > srv_rows - rows)
++			or = srv_rows - rows;
++	}
++	else refresh--;
++	mc = MAX(oc, MIN(oc + cols - 1, mc));
++	mr = MAX(or, MIN(or + rows - 1, mr));
+ 	if (ie[0] & 0x01)
+ 		mask |= VNC_BUTTON1_MASK;
+ 	if (ie[0] & 0x04)
+@@ -233,6 +268,8 @@
+ 	me.x = htons(mc);
+ 	me.mask = mask;
+ 	write(fd, &me, sizeof(me));
++	if (refresh)
++		vnc_refresh(fd, 0);
+ 	return 0;
+ }
+ 
+@@ -292,12 +329,11 @@
+ 			k = 0xff0d;
+ 			break;
+ 		case 0x0c:	/* ^L: redraw */
+-			if (vnc_refresh(fd, 0))
+-				return -1;
++			vnc_refresh(fd, 0);
+ 		default:
+ 			k = (unsigned char) key[i];
+ 		}
+-		if (k >= 'A' && k <= 'Z' || strchr(":\"<>?{}|+_()*&^%$#@!~", k))
++		if ((k >= 'A' && k <= 'Z') || strchr(":\"<>?{}|+_()*&^%$#@!~", k))
+ 			mod[nmod++] = 0xffe1;
+ 		if (k >= 1 && k <= 26) {
+ 			k = 'a' + k - 1;
+@@ -339,7 +375,7 @@
+ 	write(STDIN_FILENO, show, strlen(show));
+ }
+ 
+-static void mainloop(int vnc_fd, int kbd_fd, int rat_fd)
++static int mainloop(int vnc_fd, int kbd_fd, int rat_fd)
+ {
+ 	struct pollfd ufds[3];
+ 	int pending = 0;
+@@ -350,29 +386,31 @@
+ 	ufds[1].events = POLLIN;
+ 	ufds[2].fd = rat_fd;
+ 	ufds[2].events = POLLIN;
+-	if (vnc_refresh(vnc_fd, 0))
+-		return;
++	vnc_refresh(vnc_fd, 0);
+ 	while (1) {
+ 		err = poll(ufds, 3, 500);
+ 		if (err == -1 && errno != EINTR)
+ 			break;
+ 		if (!err)
+ 			continue;
++		err = -2;
+ 		if (ufds[0].revents & POLLIN)
+ 			if (kbd_event(vnc_fd, kbd_fd) == -1)
+ 				break;
++		err--;
+ 		if (ufds[1].revents & POLLIN) {
+ 			if (vnc_event(vnc_fd) == -1)
+ 				break;
+ 			pending = 0;
+ 		}
++		err--;
+ 		if (ufds[2].revents & POLLIN)
+ 			if (rat_event(vnc_fd, rat_fd) == -1)
+ 				break;
+ 		if (!pending++)
+-			if (vnc_refresh(vnc_fd, 1))
+-				break;
++			vnc_refresh(vnc_fd, 1);
+ 	}
++	return err;
+ }
+ 
+ int main(int argc, char * argv[])
+@@ -380,27 +418,34 @@
  	char *port = VNC_PORT;
  	char *host = "127.0.0.1";
  	struct termios ti;
 -	int vnc_fd, rat_fd;
 +	int vnc_fd, rat_fd, status;
++	
++	if (argc < 2) {
++		fprintf(stderr, "Usage : fbvnc server [port]\n");
++		return 0;
++  	}
  	if (argc >= 2)
  		host = argv[1];
  	if (argc >= 3)
@@ -55,15 +381,28 @@
 -	if ((vnc_fd = vnc_connect(host, port)) == -1) {
 -		fprintf(stderr, "could not connect!\n");
 +	if ((vnc_fd = vnc_connect(host, port)) < 0) {
-+		fprintf(stderr, "could not connect! %s %s %d\n",
++		fprintf(stderr, "could not connect! %s %s : %d\n",
 +			host,port,vnc_fd);
  		return 1;
  	}
 -	if (vnc_init(vnc_fd) == -1) {
 -		fprintf(stderr, "vnc init failed!\n");
+-		return 1;
 +	status = vnc_init(vnc_fd);
 +	if (status < 0) {
 +		fprintf(stderr, "vnc init failed! %d\n", status);
- 		return 1;
++		return 2;
  	}
  	term_setup(&ti);
+ 	rat_fd = open("/dev/input/mice", O_RDONLY);
+ 
+-	mainloop(vnc_fd, 0, rat_fd);
++	status = mainloop(vnc_fd, 0, rat_fd);
+ 
+ 	term_cleanup(&ti);
+ 	vnc_free();
+ 	close(vnc_fd);
+ 	close(rat_fd);
+-	return 0;
++	return 2 - status;
+ }
