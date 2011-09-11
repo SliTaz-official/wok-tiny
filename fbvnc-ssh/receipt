@@ -1,0 +1,66 @@
+# SliTaz package receipt.
+
+PACKAGE="fbvnc-ssh"
+VERSION="1.0"
+CATEGORY="network"
+SHORT_DESC="VNC client in frame buffer within a SSH tunnel."
+MAINTAINER="pascal.bellard@slitaz.org"
+WEB_SITE="http://tiny.slitaz.org/"
+DEPENDS="base-tiny fbvnc dropbear"
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	mkdir -p $fs/usr/bin
+}
+
+config_form()
+{
+	[ "$VNCONLY" == "no" ] || VNCONLY=yes
+	[ -n "$VNCUSER" ] || VNCUSER=tux
+	cat <<EOT
+<table>
+<tr>
+<td>SSH user for the VNC server</td>
+<td><input type="text" name="VNCUSER" value="$VNCUSER"></td>
+</tr>
+<tr>
+<td>Remove virtual consoles ?</td>
+<td>
+<input type="radio" name="VNCONLY" $([ "$VNCONLY" == "no" ] && echo "checked=checked ")value="no"> keep virtual consoles 3 to 6
+<input type="radio" name="VNCONLY" $([ "$VNCONLY" == "yes" ] && echo "checked=checked ")value="yes"> keep VNC console only
+</td>
+</tr>
+</table>
+<p>
+You should add the public key in <b>\$HOME/.ssh/authorized_keys</b> of the VNS/SSH server.
+</p>
+<p>
+You can get it on the client (from configuration files) with:
+</p>
+<pre>
+# dropbearkey -y -f /etc/dropbear/dropbear_dss_host_key | grep ^ssh
+</pre>
+or
+<pre>
+# dropbearkey -y -f /etc/dropbear/dropbear_rsa_host_key | grep ^ssh
+</pre>
+EOT
+}
+
+post_install()
+{
+	sed -i 's/\(fbvnc -bpp [0-9]*\) \([^|]*\)/\1 127.0.0.1 5900/;/kill -1 1/d' $1/etc/init.d/local.sh
+	cat >> $1/etc/init.d/local.sh <<EOT
+
+# From fbvnc-ssh
+EOT
+	[ "$VNCONLY" == "yes" ] &&  cat >> $1/etc/init.d/local.sh <<EOT
+sed -i '/^tty[3-9]:.*/d' /etc/inittab
+EOT
+	cat >> $1/etc/init.d/local.sh <<EOT
+grep -qs fbvnc /etc/inittab &&
+sed -i "s|tty2:.*|tty2::respawn:/usr/bin/ssh -i /etc/dropbear/dropbear_dss_host_key -i /etc/dropbear/dropbear_rsa_host_key -y -N -L 5900:127.0.0.1:\$VNCPORT $VNCUSER@\$VNCSERVER|" /etc/inittab
+kill -1 1
+EOT
+}

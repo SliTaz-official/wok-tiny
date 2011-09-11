@@ -6,16 +6,15 @@ CATEGORY="security"
 SHORT_DESC="Light SSH client and server."
 MAINTAINER="pascal.bellard@slitaz.org"
 TARBALL="$PACKAGE-$VERSION.tar.gz"
-DEPENDS="libutil libcrypt"
+DEPENDS="libutil"
 [ -n "$TARGET" ] || TARGET="i486"
 BUILD_DEPENDS="dropbear uclibc-cross-compiler-$TARGET"
 SUGGESTED="sftp-server"
 WEB_SITE="http://matt.ucc.asn.au/dropbear/dropbear.html"
 WGET_URL="http://matt.ucc.asn.au/dropbear/releases/$TARBALL"
-CONFIG_FILES="/etc/dropbear"
+CONFIG_FILES="/etc/dropbear /etc/daemons.conf /etc/rcS.conf"
 PROVIDE="ssh"
 TAGS="ssh"
-BUGS="should enable zlib"
 
 # Rules to configure and make the package.
 compile_rules()
@@ -59,13 +58,20 @@ EOT
 # Post message when installing.
 post_install()
 {
-	echo "$DSSKEY" | uudecode - > $1/etc/dropbear/dropbear_dss_host_key
-	echo "$RSAKEY" | uudecode - > $1/etc/dropbear/dropbear_rsa_host_key
-	chmod 600 $1/etc/dropbear/dropbear_*_host_key
-	grep -q dropbear $1/etc/rcS.conf ||
+	cat >> $1/etc/daemons.conf <<EOT
+
+# Dropbear SSH server options.
+DROPBEAR_OPTIONS="$DROPBEAR_OPTS"
+EOT
+	grep -qs 'dropbear ' $1/etc/rcS.conf ||
 	sed -i 's/^RUN_DAEMONS="/&dropbear /' $1/etc/rcS.conf
-	sed -i "s/^DROPBEAR_OPTIONS=.*/DROPBEAR_OPTIONS=\"$DROPBEAR_OPTS\"/" \
-		$1/etc/daemons.conf
+	dos2unix <<EOT | uudecode - > $1/etc/dropbear/dropbear_dss_host_key
+$DSSKEY
+EOT
+	dos2unix <<EOT | uudecode - > $1/etc/dropbear/dropbear_rsa_host_key
+$RSAKEY
+EOT
+	chmod 600 $1/etc/dropbear/dropbear_*_host_key
 }
 
 config_form()
@@ -76,11 +82,21 @@ config_form()
 		DSSKEY="$(uuencode -m - < /tmp/mkssh$$)"
 		rm -f /tmp/mkssh$$
 	fi
+	uudecode - > /tmp/mkssh$$ <<EOT
+$DSSKEY
+EOT
+	DSSPUB="$(dropbearkey  -y -f /tmp/mkssh$$ | grep ^ssh)"
+	rm -f /tmp/mkssh$$
 	if [ -z "$RSAKEY" ]; then
 		dropbearkey -t rsa -f /tmp/mkssh$$ > /dev/null 2>&1
 		RSAKEY="$(uuencode -m - < /tmp/mkssh$$)"
 		rm -f /tmp/mkssh$$
 	fi
+	uudecode - > /tmp/mkssh$$ <<EOT
+$RSAKEY
+EOT
+	RSAPUB="$(dropbearkey  -y -f /tmp/mkssh$$ | grep ^ssh)"
+	rm -f /tmp/mkssh$$
 	cat <<EOT
 <table>
 <tr>
@@ -107,6 +123,14 @@ You can set your dropbear key
 Or your ssh key
 <pre>
 # dropbearconvert openssh dropbear /etc/ssh/id_dsa /dev/stdout | uuencode -m -
+</pre>
+Default DSS public key is
+<pre>
+$DSSPUB
+</pre>
+Default RSA public key is
+<pre>
+$RSAPUB
 </pre>
 EOT
 }
