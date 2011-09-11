@@ -86,13 +86,13 @@
  }
 --- fbvnc.c
 +++ fbvnc.c
-@@ -36,10 +36,11 @@
+@@ -36,13 +36,15 @@
  
  #define VNC_PORT		"5900"
  
 -#define MAXRES			(1 << 21)
 -#define MIN(a, b)		((a) < (b) ? (a) : (b))
-+#define MAXRES			(1 << 14)
++#define MAXRES			(1 << 12)
  
  static int cols, rows;
 +static int srv_cols, srv_rows;
@@ -100,12 +100,17 @@
  static int mr, mc;		/* mouse position */
  
  static char buf[MAXRES];
-@@ -62,15 +63,22 @@
++#define MAXPIX		(MAXRES/sizeof(fbval_t))
+ 
+ static int vnc_connect(char *addr, char *port)
+ {
+@@ -61,22 +63,28 @@
+ 
  	if (connect(fd, addrinfo->ai_addr, addrinfo->ai_addrlen) == -1) {
  		close(fd);
- 		freeaddrinfo(addrinfo);
+-		freeaddrinfo(addrinfo);
 -		return -1;
-+		return -2;
++		fd = -2;
  	}
  	freeaddrinfo(addrinfo);
  	return fd;
@@ -115,15 +120,23 @@
 +static struct rgb_conv format;
  static int vnc_init(int fd)
  {
+-	char vncver[] = "RFB 003.003\n";
 +	static struct { int bpp, fmt; } fmt[] = {
 +		{ 32, 0x0888 },  { 16, 0x0565 },  { 8, 0x0233 }, { -1, 0 }
 +	};
- 	char vncver[] = "RFB 003.003\n";
++	char vncver[12];
 +	int i;
 +
  	struct vnc_client_init clientinit;
  	struct vnc_server_init serverinit;
  	struct vnc_client_pixelfmt pixfmt_cmd;
+ 	int connstat = VNC_CONN_FAILED;
+ 
+-	write(fd, vncver, 12);
++	write(fd, "RFB 003.003\n", 12);
+ 	read(fd, vncver, 12);
+ 
+ 	read(fd, &connstat, sizeof(connstat));
 @@ -88,68 +96,71 @@
  	write(fd, &clientinit, sizeof(clientinit));
  	read(fd, &serverinit, sizeof(serverinit));
@@ -219,64 +232,125 @@
 -		}
 -		fb_set(y + i, x, slice, w);
 +	fbval_t slice[MAXRES];
-+	int j, k;
++	unsigned char *byte = (unsigned char *) slice;
++	int j;
 +	int mode = FBM_BPP(fb_mode());
-+	for (j = k = 0; j < w; j++, k += mode, s += Bpp) {
++	for (j = 0; j < w; j++, byte += mode, s += Bpp) {
 +		fbval_t c = * (fbval_t *) s;
 +		int r = (c & format.rmax) << format.rskp;
 +		int g = ((c >> format.gshr) & format.gmax) << format.gskp;
 +		int b = ((c >> format.bshr) & format.bmax) << format.bskp;
-+		unsigned char *byte = (unsigned char *) slice;
-+		* (fbval_t *) (byte + k) = FB_VAL(r, g, b);
++		* (fbval_t *) byte = FB_VAL(r, g, b);
  	}
 +	fb_set(y, x, slice, w);
  }
  
  static void xread(int fd, void *buf, int len)
-@@ -181,18 +192,37 @@
- 		xread(fd, msg + 1, sizeof(*fbup) - 1);
- 		n = ntohs(fbup->n);
+@@ -159,54 +170,79 @@
+ 	while (nr < len && (n = read(fd, buf + nr, len - nr)) > 0)
+ 		nr += n;
+ 	if (nr < len) {
+-		printf("partial vnc read!\n");
+-		exit(1);
++		fprintf(stderr,"partial vnc read!\n");
++		exit(99);
+ 	}
+ }
+ 
++static void skip(int fd, int len)
++{
++	int n;
++	while (len > 0 && (n = read(fd, buf, MIN(len, sizeof(buf)))) > 0)
++		len -= n;
++}
++
+ static int vnc_event(int fd)
+ {
+ 	struct vnc_rect uprect;
+-	char msg[1 << 12];
+-	struct vnc_server_fbup *fbup = (void *) msg;
+-	struct vnc_server_cuttext *cuttext = (void *) msg;
+-	struct vnc_server_colormap *colormap = (void *) msg;
+-	int j;
+-	int n;
++	union {
++		struct vnc_server_fbup fbup;
++		struct vnc_server_cuttext cuttext;
++		struct vnc_server_colormap colormap;
++	} msg;
++	int j, n;
+ 
+-	if (read(fd, msg, 1) != 1)
++	if (read(fd, &msg.fbup.type, 1) != 1)
+ 		return -1;
+-	switch (msg[0]) {
++	switch (msg.fbup.type) {
+ 	case VNC_SERVER_FBUP:
+-		xread(fd, msg + 1, sizeof(*fbup) - 1);
+-		n = ntohs(fbup->n);
++		xread(fd, &msg.fbup.pad, sizeof(msg.fbup) - 1);
++		n = ntohs(msg.fbup.n);
  		for (j = 0; j < n; j++) {
 -			int x, y, w, h;
-+			int x, y, w, h, l;
-+			char *p;
++			int x, y, w, h, l, i;
  			xread(fd, &uprect, sizeof(uprect));
++			if (uprect.enc != 0) {
++				fprintf(stderr,"Encoding not RAW: %d\n",
++					ntohl(uprect.enc));
++				return -1;
++			}
  			x = ntohs(uprect.x);
  			y = ntohs(uprect.y);
  			w = ntohs(uprect.w);
  			h = ntohs(uprect.h);
 -			if (x >= cols || x + w > cols)
-+			if (ntohl(uprect.enc) != 0) {
-+				fprintf(stderr,"Encoding not RAW: %d\n",
-+					ntohl(uprect.enc));
- 				return -1;
+-				return -1;
 -			if (y >= rows || y + h > rows)
-+			}
-+			if (w * Bpp > MAXRES) {
-+				fprintf(stderr,"too much pixels: %dx%d, max %d\n",
-+					w, Bpp, MAXRES);
- 				return -1;
+-				return -1;
 -			xread(fd, buf, w * h);
 -			drawfb(buf, x, y, w, h);
-+			}
-+			p = buf;
 +			x -= oc;
 +			y -= or;
++			i = 0;
 +			l = MIN(w, cols - x);
 +			if (x < 0) {
 +				l = MIN(w + x, cols);
-+				p -= x * Bpp;
++				i = -x;
 +				x = 0;
 +			}
-+			for (w *= Bpp; h--; y++) {
-+				xread(fd, buf, w);
-+				if (y >= 0 && y < rows && l > 0)
-+					drawfb(p, x, y, l);
++			for (; h--; y++) {
++				int a, b, c = i;
++				for (a = b = 0; w > b; b += a, c = 0) {
++					a = MIN(w - b, MAXPIX);
++					xread(fd, buf, a * Bpp);
++					if (y >= 0 && y < rows && l > b)
++						drawfb(buf + (c * Bpp), x + b,
++						       y, MIN(a, l - b) - c);
++				}
 +			}
  		}
  		break;
  	case VNC_SERVER_BELL:
-@@ -217,12 +247,31 @@
+ 		break;
+ 	case VNC_SERVER_CUTTEXT:
+-		xread(fd, msg + 1, sizeof(*cuttext) - 1);
+-		xread(fd, buf, ntohl(cuttext->len));
++		xread(fd, &msg.cuttext.pad1, sizeof(msg.cuttext) - 1);
++		skip(fd, ntohl(msg.cuttext.len));
+ 		break;
+ 	case VNC_SERVER_COLORMAP:
+-		xread(fd, msg + 1, sizeof(*colormap) - 1);
+-		xread(fd, buf, ntohs(colormap->n) * 3 * 2);
++		xread(fd, &msg.colormap.pad, sizeof(msg.colormap) - 1);
++		skip(fd, ntohs(msg.colormap.n) * 3 * 2);
+ 		break;
+ 	default:
+-		fprintf(stderr, "unknown vnc msg: %d\n", msg[0]);
++		fprintf(stderr, "unknown vnc msg: %d\n", msg.fbup.type);
+ 		return -1;
+ 	}
+ 	return 0;
+@@ -217,12 +253,31 @@
  	char ie[3];
  	struct vnc_client_ratevent me = {VNC_CLIENT_RATEVENT};
  	int mask = 0;
@@ -310,7 +384,7 @@
  	if (ie[0] & 0x01)
  		mask |= VNC_BUTTON1_MASK;
  	if (ie[0] & 0x04)
-@@ -233,6 +282,8 @@
+@@ -233,6 +288,8 @@
  	me.x = htons(mc);
  	me.mask = mask;
  	write(fd, &me, sizeof(me));
@@ -319,7 +393,7 @@
  	return 0;
  }
  
-@@ -292,12 +343,11 @@
+@@ -292,12 +349,11 @@
  			k = 0xff0d;
  			break;
  		case 0x0c:	/* ^L: redraw */
@@ -334,7 +408,7 @@
  			mod[nmod++] = 0xffe1;
  		if (k >= 1 && k <= 26) {
  			k = 'a' + k - 1;
-@@ -339,7 +389,7 @@
+@@ -339,40 +395,42 @@
  	write(STDIN_FILENO, show, strlen(show));
  }
  
@@ -343,9 +417,14 @@
  {
  	struct pollfd ufds[3];
  	int pending = 0;
-@@ -350,29 +400,31 @@
- 	ufds[1].events = POLLIN;
+ 	int err;
+ 	ufds[0].fd = kbd_fd;
+-	ufds[0].events = POLLIN;
+ 	ufds[1].fd = vnc_fd;
+-	ufds[1].events = POLLIN;
  	ufds[2].fd = rat_fd;
++	ufds[0].events =
++	ufds[1].events =
  	ufds[2].events = POLLIN;
 -	if (vnc_refresh(vnc_fd, 0))
 -		return;
@@ -379,7 +458,7 @@
  }
  
  int main(int argc, char * argv[])
-@@ -380,27 +432,38 @@
+@@ -380,27 +438,38 @@
  	char *port = VNC_PORT;
  	char *host = "127.0.0.1";
  	struct termios ti;
