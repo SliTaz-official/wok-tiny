@@ -5,7 +5,7 @@
  
  /* helper functions */
 +struct rgb_conv {
-+	int rshl, gshl, bshr, gshr;
++	int rshl, gshl;
 +	int rskp, gskp, bskp;
 +	int rmax, gmax, bmax;
 +};
@@ -46,7 +46,7 @@
  }
  
  void fb_free(void)
-@@ -123,16 +127,27 @@
+@@ -123,16 +127,26 @@
  	memcpy(fb_mem(r) + (c + vinfo.xoffset) * bpp, mem, len * bpp);
  }
  
@@ -58,10 +58,9 @@
 +	s->rshl = s->gshl = bits;
 +	s->bskp = 8 - bits; s->bmax = (1 << bits) -1;
 +	bits = mode & 0xF;  mode >>= 4;
-+	s->rshl += bits; s->bshr = bits;
++	s->rshl += bits;
 +	s->gskp = 8 - bits; s->gmax = (1 << bits) -1;
 +	bits = mode & 0xF;
-+	s->bshr += s->gshr = bits;
 +	s->rskp = 8 - bits; s->rmax = (1 << bits) -1;
 +}
 +
@@ -86,6 +85,12 @@
  }
 --- fbvnc.c
 +++ fbvnc.c
+@@ -1,4 +1,4 @@
+-/*
++/* // TODO user/passwd RDP?
+  * fbvnc - a small linux framebuffer vnc viewer
+  *
+  * Copyright (C) 2009-2011 Ali Gholami Rudi
 @@ -36,13 +36,15 @@
  
  #define VNC_PORT		"5900"
@@ -104,7 +109,7 @@
  
  static int vnc_connect(char *addr, char *port)
  {
-@@ -61,22 +63,28 @@
+@@ -61,22 +63,26 @@
  
  	if (connect(fd, addrinfo->ai_addr, addrinfo->ai_addrlen) == -1) {
  		close(fd);
@@ -116,14 +121,12 @@
  	return fd;
  }
  
-+static int bpp, Bpp;
++static int bpp, vnc_mode;
 +static struct rgb_conv format;
  static int vnc_init(int fd)
  {
 -	char vncver[] = "RFB 003.003\n";
-+	static struct { int bpp, fmt; } fmt[] = {
-+		{ 32, 0x0888 },  { 16, 0x0565 },  { 8, 0x0233 }, { -1, 0 }
-+	};
++	static int vncfmt[] = { 0x40888, 0x20565, 0x10233, 0 };
 +	char vncver[12];
 +	int i;
 +
@@ -137,7 +140,7 @@
  	read(fd, vncver, 12);
  
  	read(fd, &connstat, sizeof(connstat));
-@@ -88,68 +96,71 @@
+@@ -88,68 +94,78 @@
  	write(fd, &clientinit, sizeof(clientinit));
  	read(fd, &serverinit, sizeof(serverinit));
  
@@ -166,28 +169,31 @@
 -	pixfmt_cmd.format.depth = 8;
  	pixfmt_cmd.format.bigendian = 0;
  	pixfmt_cmd.format.truecolor = 1;
--
+ 
 -	pixfmt_cmd.format.rmax = htons(3);
 -	pixfmt_cmd.format.gmax = htons(7);
 -	pixfmt_cmd.format.bmax = htons(7);
-+	if (bpp < 0) bpp = 0;
-+	if (bpp >= 24) bpp = 32;
-+	i = 0; do {
-+		pixfmt_cmd.format.bpp =
-+		pixfmt_cmd.format.depth = fmt[i].bpp;
-+		fill_rgb_conv(fmt[i].fmt, &format);
-+	} while (bpp <= fmt[++i].bpp);
-+	Bpp = pixfmt_cmd.format.bpp / 8;
-+
-+	pixfmt_cmd.format.rmax = htons(format.rmax);
-+	pixfmt_cmd.format.gmax = htons(format.gmax);
-+	pixfmt_cmd.format.bmax = htons(format.bmax);
- 	pixfmt_cmd.format.rshl = 0;
+-	pixfmt_cmd.format.rshl = 0;
 -	pixfmt_cmd.format.gshl = 2;
 -	pixfmt_cmd.format.bshl = 5;
 -
-+	pixfmt_cmd.format.gshl = format.gshr;
-+	pixfmt_cmd.format.bshl = format.bshr;
++	if (bpp < 1)
++		bpp = 1;
++	if (bpp >= 3)
++		bpp = 4;
++	for (i = 0; bpp <= FBM_BPP(vncfmt[i]); i++)
++		vnc_mode = vncfmt[i];
++	bpp = FBM_BPP(vnc_mode);
++	pixfmt_cmd.format.bpp =
++	pixfmt_cmd.format.depth = bpp << 3;
++
++	fill_rgb_conv(FBM_COLORS(vnc_mode), &format);
++	pixfmt_cmd.format.rmax = htons(format.rmax);
++	pixfmt_cmd.format.gmax = htons(format.gmax);
++	pixfmt_cmd.format.bmax = htons(format.bmax);
++	pixfmt_cmd.format.rshl = format.rshl;
++	pixfmt_cmd.format.gshl = format.gshl;
++	pixfmt_cmd.format.bshl = 0;
  	write(fd, &pixfmt_cmd, sizeof(pixfmt_cmd));
  	return fd;
  }
@@ -229,24 +235,27 @@
 -			int g = ((c >> 2) & 0x7) << 5;
 -			int b = ((c >> 5) & 0x7) << 5;
 -			slice[j] = FB_VAL(r, g, b);
--		}
++	int mode = fb_mode();
++	if (mode != vnc_mode) {
++		fbval_t slice[MAXRES];
++		unsigned char *byte = (unsigned char *) slice;
++		int j;
++		int fb_bpp = FBM_BPP(mode);
++		for (j = 0; j < w; j++, byte += fb_bpp, s += bpp) {
++			fbval_t c = * (fbval_t *) s;
++			int r = ((c >> format.rshl) & format.rmax) << format.rskp;
++			int g = ((c >> format.gshl) & format.gmax) << format.gskp;
++			int b = (c & format.bmax) << format.bskp;
++			* (fbval_t *) byte = FB_VAL(r, g, b);
+ 		}
 -		fb_set(y + i, x, slice, w);
-+	fbval_t slice[MAXRES];
-+	unsigned char *byte = (unsigned char *) slice;
-+	int j;
-+	int mode = FBM_BPP(fb_mode());
-+	for (j = 0; j < w; j++, byte += mode, s += Bpp) {
-+		fbval_t c = * (fbval_t *) s;
-+		int r = (c & format.rmax) << format.rskp;
-+		int g = ((c >> format.gshr) & format.gmax) << format.gskp;
-+		int b = ((c >> format.bshr) & format.bmax) << format.bskp;
-+		* (fbval_t *) byte = FB_VAL(r, g, b);
++		s = (void *) slice;
  	}
-+	fb_set(y, x, slice, w);
++	fb_set(y, x, s, w);
  }
  
  static void xread(int fd, void *buf, int len)
-@@ -159,54 +170,79 @@
+@@ -159,54 +175,79 @@
  	while (nr < len && (n = read(fd, buf + nr, len - nr)) > 0)
  		nr += n;
  	if (nr < len) {
@@ -322,9 +331,9 @@
 +				int a, b, c = i;
 +				for (a = b = 0; w > b; b += a, c = 0) {
 +					a = MIN(w - b, MAXPIX);
-+					xread(fd, buf, a * Bpp);
++					xread(fd, buf, a * bpp);
 +					if (y >= 0 && y < rows && l > b)
-+						drawfb(buf + (c * Bpp), x + b,
++						drawfb(buf + (c * bpp), x + b,
 +						       y, MIN(a, l - b) - c);
 +				}
 +			}
@@ -350,7 +359,7 @@
  		return -1;
  	}
  	return 0;
-@@ -217,12 +253,31 @@
+@@ -217,12 +258,31 @@
  	char ie[3];
  	struct vnc_client_ratevent me = {VNC_CLIENT_RATEVENT};
  	int mask = 0;
@@ -384,7 +393,7 @@
  	if (ie[0] & 0x01)
  		mask |= VNC_BUTTON1_MASK;
  	if (ie[0] & 0x04)
-@@ -233,6 +288,8 @@
+@@ -233,6 +293,8 @@
  	me.x = htons(mc);
  	me.mask = mask;
  	write(fd, &me, sizeof(me));
@@ -393,7 +402,7 @@
  	return 0;
  }
  
-@@ -292,12 +349,11 @@
+@@ -292,12 +354,11 @@
  			k = 0xff0d;
  			break;
  		case 0x0c:	/* ^L: redraw */
@@ -408,7 +417,7 @@
  			mod[nmod++] = 0xffe1;
  		if (k >= 1 && k <= 26) {
  			k = 'a' + k - 1;
-@@ -339,40 +395,42 @@
+@@ -339,40 +400,42 @@
  	write(STDIN_FILENO, show, strlen(show));
  }
  
@@ -458,7 +467,7 @@
  }
  
  int main(int argc, char * argv[])
-@@ -380,27 +438,38 @@
+@@ -380,27 +443,38 @@
  	char *port = VNC_PORT;
  	char *host = "127.0.0.1";
  	struct termios ti;
@@ -471,7 +480,7 @@
 +  	}
 +  	if (*argv[1] == '-' && argc >= 3) {
 +  		argc -= 2; argv += 2;
-+  		bpp = atoi(argv[0]);
++  		bpp = atoi(argv[0]) >> 3;
 +  	} 
  	if (argc >= 2)
  		host = argv[1];

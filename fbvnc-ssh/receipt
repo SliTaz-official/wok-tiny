@@ -33,7 +33,7 @@ config_form()
 </tr>
 </table>
 <p>
-You should add the public key in <b>\$HOME/.ssh/authorized_keys</b> of the VNS/SSH server.
+You should add the public key in <b>\$HOME/.ssh/authorized_keys</b> of the VNC/SSH server.
 </p>
 <p>
 You can get it on the client (from configuration files) with:
