@@ -14,7 +14,98 @@
  unsigned fb_val(int r, int g, int b);
 --- draw.c
 +++ draw.c
-@@ -72,11 +72,14 @@
+@@ -10,14 +10,13 @@
+ 
+ #define MIN(a, b)	((a) < (b) ? (a) : (b))
+ #define MAX(a, b)	((a) > (b) ? (a) : (b))
+-#define NLEVELS		(1 << 8)
++#define NLEVELS		(1 << 16)
+ 
+ static int fd;
+ static void *fb;
+ static struct fb_var_screeninfo vinfo;
+ static struct fb_fix_screeninfo finfo;
+-static int bpp;
+-static int nr, ng, nb;
++static int bytes_per_pixel;
+ 
+ static int fb_len(void)
+ {
+@@ -28,10 +27,12 @@
+ {
+ 	static unsigned short red[NLEVELS], green[NLEVELS], blue[NLEVELS];
+ 	struct fb_cmap cmap;
++
+ 	if (finfo.visual == FB_VISUAL_TRUECOLOR)
+ 		return;
++
+ 	cmap.start = 0;
+-	cmap.len = MAX(nr, MAX(ng, nb));
++	cmap.len = NLEVELS;
+ 	cmap.red = red;
+ 	cmap.green = green;
+ 	cmap.blue = blue;
+@@ -41,24 +42,39 @@
+ 
+ void fb_cmap(void)
+ {
+-	unsigned short red[NLEVELS], green[NLEVELS], blue[NLEVELS];
++	struct fb_bitfield *color[3] = {
++		&vinfo.blue, &vinfo.green, &vinfo.red
++	};
++	int eye_sensibility[3] = { 2, 0, 1 }; // higher=red, blue, lower=green
+ 	struct fb_cmap cmap;
+-	int i;
++	unsigned short map[3][NLEVELS];
++	int i, j, n, offset;
++
+ 	if (finfo.visual == FB_VISUAL_TRUECOLOR)
+ 		return;
+ 
+-	for (i = 0; i < nr; i++)
+-		red[i] = (65535 / (nr - 1)) * i;
+-	for (i = 0; i < ng; i++)
+-		green[i] = (65535 / (ng - 1)) * i;
+-	for (i = 0; i < nb; i++)
+-		blue[i] = (65535 / (nb - 1)) * i;
+-
++	for (i = 0, n = vinfo.bits_per_pixel; i < 3; i++) {
++		n -= color[eye_sensibility[i]]->length = n / (3 - i);
++	}
++	n = (1 << vinfo.bits_per_pixel);
++	if (n > NLEVELS)
++		n = NLEVELS;
++	for (i = offset = 0; i < 3; i++) {
++		int length = color[i]->length;
++		color[i]->offset = offset;
++		for (j = 0; j < n; j++) {
++			int k = (j >> offset) << (16 - length);
++			if (k == (0xFFFF << (16 - length)))
++				k = 0xFFFF;
++			map[i][j] = k;
++		}
++		offset += length;
++	}
+ 	cmap.start = 0;
+-	cmap.len = MAX(nr, MAX(ng, nb));
+-	cmap.red = red;
+-	cmap.green = green;
+-	cmap.blue = blue;
++	cmap.len = n;
++	cmap.red = map[2];
++	cmap.green = map[1];
++	cmap.blue = map[0];
+ 	cmap.transp = NULL;
+ 
+ 	ioctl(fd, FBIOPUTCMAP, &cmap);
+@@ -66,25 +82,26 @@
+ 
+ unsigned fb_mode(void)
+ {
+-	return (bpp << 16) | (vinfo.red.length << 8) |
++	return (bytes_per_pixel << 16) | (vinfo.red.length << 8) |
+ 		(vinfo.green.length << 4) | (vinfo.blue.length);
+ }
  
  int fb_init(void)
  {
@@ -29,15 +120,17 @@
  	if (ioctl(fd, FBIOGET_FSCREENINFO, &finfo) == -1)
  		goto failed;
  	fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
-@@ -85,6 +88,7 @@
- 	ng = 1 << vinfo.blue.length;
- 	nb = 1 << vinfo.green.length;
+-	bpp = (vinfo.bits_per_pixel + 7) >> 3;
+-	nr = 1 << vinfo.red.length;
+-	ng = 1 << vinfo.blue.length;
+-	nb = 1 << vinfo.green.length;
++	bytes_per_pixel = (vinfo.bits_per_pixel + 7) >> 3;
  	fb = mmap(NULL, fb_len(), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 +	err++;
  	if (fb == MAP_FAILED)
  		goto failed;
  	fb_cmap_save(1);
-@@ -93,7 +97,7 @@
+@@ -93,7 +110,7 @@
  failed:
  	perror("fb_init()");
  	close(fd);
@@ -46,8 +139,13 @@
  }
  
  void fb_free(void)
-@@ -123,16 +127,26 @@
- 	memcpy(fb_mem(r) + (c + vinfo.xoffset) * bpp, mem, len * bpp);
+@@ -120,19 +137,30 @@
+ 
+ void fb_set(int r, int c, void *mem, int len)
+ {
+-	memcpy(fb_mem(r) + (c + vinfo.xoffset) * bpp, mem, len * bpp);
++	memcpy(fb_mem(r) + (c + vinfo.xoffset) * bytes_per_pixel,
++		mem, len * bytes_per_pixel);
  }
  
 +void fill_rgb_conv(int mode, struct rgb_conv *s)
@@ -85,12 +183,6 @@
  }
 --- fbvnc.c
 +++ fbvnc.c
-@@ -1,4 +1,4 @@
--/*
-+/* // TODO user/passwd RDP?
-  * fbvnc - a small linux framebuffer vnc viewer
-  *
-  * Copyright (C) 2009-2011 Ali Gholami Rudi
 @@ -36,13 +36,15 @@
  
  #define VNC_PORT		"5900"
@@ -176,9 +268,8 @@
 -	pixfmt_cmd.format.rshl = 0;
 -	pixfmt_cmd.format.gshl = 2;
 -	pixfmt_cmd.format.bshl = 5;
--
 +	if (bpp < 1)
-+		bpp = 1;
++	  	bpp = FBM_BPP(fb_mode());
 +	if (bpp >= 3)
 +		bpp = 4;
 +	for (i = 0; bpp <= FBM_BPP(vncfmt[i]); i++)
@@ -186,7 +277,7 @@
 +	bpp = FBM_BPP(vnc_mode);
 +	pixfmt_cmd.format.bpp =
 +	pixfmt_cmd.format.depth = bpp << 3;
-+
+ 
 +	fill_rgb_conv(FBM_COLORS(vnc_mode), &format);
 +	pixfmt_cmd.format.rmax = htons(format.rmax);
 +	pixfmt_cmd.format.gmax = htons(format.gmax);
@@ -255,7 +346,7 @@
  }
  
  static void xread(int fd, void *buf, int len)
-@@ -159,54 +175,79 @@
+@@ -159,54 +175,84 @@
  	while (nr < len && (n = read(fd, buf + nr, len - nr)) > 0)
  		nr += n;
  	if (nr < len) {
@@ -324,18 +415,23 @@
 +			l = MIN(w, cols - x);
 +			if (x < 0) {
 +				l = MIN(w + x, cols);
-+				i = -x;
++				i = MIN(w, -x);
 +				x = 0;
 +			}
++			if (l < 0)
++				l = 0;
 +			for (; h--; y++) {
-+				int a, b, c = i;
-+				for (a = b = 0; w > b; b += a, c = 0) {
-+					a = MIN(w - b, MAXPIX);
-+					xread(fd, buf, a * bpp);
-+					if (y >= 0 && y < rows && l > b)
-+						drawfb(buf + (c * bpp), x + b,
-+						       y, MIN(a, l - b) - c);
++				int n = l;
++				int xj = x;
++				skip(fd, i * bpp);
++				while (n > 0) {
++					int j = MIN(n, MAXPIX);
++					xread(fd, buf, j * bpp);
++					if (y >= 0 && y < rows)
++						drawfb(buf, xj, y, j);
++					xj += j; n -= j;
 +				}
++				skip(fd, (w - l - i) * bpp);
 +			}
  		}
  		break;
@@ -359,7 +455,7 @@
  		return -1;
  	}
  	return 0;
-@@ -217,12 +258,31 @@
+@@ -217,12 +263,31 @@
  	char ie[3];
  	struct vnc_client_ratevent me = {VNC_CLIENT_RATEVENT};
  	int mask = 0;
@@ -393,7 +489,7 @@
  	if (ie[0] & 0x01)
  		mask |= VNC_BUTTON1_MASK;
  	if (ie[0] & 0x04)
-@@ -233,6 +293,8 @@
+@@ -233,6 +298,8 @@
  	me.x = htons(mc);
  	me.mask = mask;
  	write(fd, &me, sizeof(me));
@@ -402,7 +498,7 @@
  	return 0;
  }
  
-@@ -292,12 +354,11 @@
+@@ -292,12 +359,11 @@
  			k = 0xff0d;
  			break;
  		case 0x0c:	/* ^L: redraw */
@@ -417,7 +513,7 @@
  			mod[nmod++] = 0xffe1;
  		if (k >= 1 && k <= 26) {
  			k = 'a' + k - 1;
-@@ -339,40 +400,42 @@
+@@ -339,40 +405,42 @@
  	write(STDIN_FILENO, show, strlen(show));
  }
  
@@ -467,7 +563,7 @@
  }
  
  int main(int argc, char * argv[])
-@@ -380,27 +443,38 @@
+@@ -380,27 +448,38 @@
  	char *port = VNC_PORT;
  	char *host = "127.0.0.1";
  	struct termios ti;
