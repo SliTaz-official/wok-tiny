@@ -44,6 +44,7 @@ config_form()
 	*) BPP=16 ;;
 	esac
 	[ -n "$PORT" ] || PORT=5900
+	[ -n "$SERVER" ] || SERVER="192.168.0.10"
 	cat <<EOT
 <table>
 <tr>
@@ -52,7 +53,7 @@ config_form()
 <input type="radio" name="START" $([ "$START" == "no" ] && echo "checked=checked ")value="no"> never
 <input type="radio" name="START" $([ "$START" == "yes" ] && echo "checked=checked ")value="yes"> always
 <input type="radio" name="START" $([ "$START" == "ask" ] && echo "checked=checked ")value="ask"> ask during boot
-<input type="radio" name="START" $([ "$START" == "cmdline" ] && echo "checked=checked ")value="cmdline"> with kernel argument 'fbvnc=server:port'
+<input type="radio" name="START" $([ "$START" == "cmdline" ] && echo "checked=checked ")value="cmdline"> with kernel argument 'fbvnc=<i>server</i>:<i>port</i>'
 </td>
 </tr>
 <tr>
@@ -65,13 +66,46 @@ config_form()
 </tr>
 <tr>
 <td>Default server</td>
-<td><input type="text" name="SERVER"></td>
+<td><input type="text" name="SERVER" value="$SERVER"></td>
 </tr>
 <tr>
 <td>Default port</td>
 <td><input type="text" name="PORT" value="$PORT"></td>
 </tr>
 </table>
+EOT
+}
+
+config_note()
+{
+	cat <<EOT
+<script type="text/javascript">
+function update_form()
+{
+	var hide = true
+	for (var i = 0; i < document.forms.length; i++) {
+		for (var j = 0; j < document.forms[i].elements.length; j++) {
+			var obj = document.forms[i].elements[j]
+			if (obj.name == "START" && obj.defaultValue == "yes"
+						&& obj.checked == true)
+				hide = false
+		}
+	}	
+	for (var i = 0; i < document.forms.length; i++) {
+		for (var j = 0; j < document.forms[i].elements.length; j++) {
+			var obj = document.forms[i].elements[j]
+			switch (obj.name) {
+			case "SERVER" :
+			case "PORT" :
+				obj.disabled = hide; break;
+			}
+		}
+	}	
+}
+update_form()
+window.onchange = update_form
+//-->
+</script>
 EOT
 }
 
