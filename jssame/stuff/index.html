@@ -1,0 +1,147 @@
+<html>
+<head>
+<title>Same Game</title>
+<style type="text/css">
+body, input {
+	background: black;
+	color: white;
+	border: none;
+	font-size: 14px;
+}
+a {
+	color: black;
+	text-decoration: none;
+}
+</style>
+<script language="javascript">
+<!-- // Original:  Jason Fondren (usher@betterbox.net) http://www.oogha.com/
+
+var none=" ", off="&#9679;", on="&bull;", color=["black","red","yellow","blue"];
+
+total = 0
+sz = (innerHeight - 20)/10
+
+main = new Array()
+init = new Array()
+for (i = 0; i < 150; i++)
+	main[i] = init[i] = 1 + Math.floor((Math.random() * 3))
+
+function sameBelow(nb) {
+	return main[nb-1] == main[nb] && (nb % 10) != 0
+}
+
+function sameAbove(nb) {
+	return main[nb+1] == main[nb] && (nb % 10) != 9
+}
+
+function AddAdj(nb) {
+	for (n=0; n<adj.length; n++)
+		if (adj[n] == nb) return
+	adj[++i] = nb
+}
+
+function notBalls(nb) {
+	if (main[nb] == 0) return true
+	adj = new Array()
+	adj[0] = nb
+	for (i = c = 0; c < adj.length; c++) {
+		nb = adj[c]
+		if (sameAbove(nb)) AddAdj(nb+1)
+		if (main[nb+10] == main[nb]) AddAdj(nb+10)
+		if (sameBelow(nb)) AddAdj(nb-1)
+		if (main[nb-10] == main[nb]) AddAdj(nb-10)
+	}
+	if (c < 2) return true
+	c -= 2
+	score = c * c
+	return false
+}
+
+function Ball(nb,state) {
+	if (notBalls(nb)) return
+	if (state == off) score = 0
+	document.scores.click.value = score
+	for (n = 0; n < adj.length; n++)
+		document.getElementById("b" + adj[n]).innerHTML = state
+}
+
+function clickBall(nb) {
+	if (notBalls(nb)) return
+	for (n=0; n<adj.length; n++) main[adj[n]] = 0
+	for (change = i = 0; i < 15; i++, change += 10) {
+		blankCount = 0
+		column = new Array()
+		newColumn = new Array()
+		for (c = 0; c < 10; c++) {
+			column[c] = main[c + change]
+			if (column[c] == 0) 
+				newColumn[10 - ++blankCount] = 0
+			else	newColumn[c - blankCount] = column[c]
+		}
+		for (c = 0; c < 10; c++) main[c + change] = newColumn[c]
+		if (blankCount == 10) {
+			for (c = change; c < 140; c++) main[c] = main[c + 10]
+			for (c = 140; c < 150; c++) main[c] = 0
+			change -= 10
+		}
+	}
+	startUp()
+	document.scores.show.value = total += score
+	Ball(nb,on)
+	if (main[0] == 0) return // board is cleared
+	for (q = 0; q < 150; q++) {
+		if (main[q] == 0) continue
+		if (sameAbove(q)) return
+		if (main[q + 10] == main[q]) return
+		if (sameBelow(q)) return
+		if (main[q - 10] == main[q]) return
+	}
+	alert("Game Over!")
+}
+
+function startUp() {
+	document.scores.show.value = 0
+	for (i = 0; i < main.length; i++) {
+		var o=document.getElementById("b" + i)
+		o.innerHTML = off
+		o.style.color = color[main[i]]
+	}
+}
+
+function replay() {
+	for (i = total = 0; i < init.length; i++)
+		main[i] = init[i]
+	startUp()
+}
+
+// -->
+</script>
+</head>
+
+<body onLoad="startUp()">
+<div align="center">
+<table border=0 cellpadding=0 cellspacing=0>
+<script language="javascript">
+<!--
+for (i = 9; i >= 0; i--) {
+	document.writeln('<tr>')
+	for (n = i; n < 150; n += 10)
+		document.writeln('<td width=' + sz + ' height=' + sz + 
+		  ' align=center style="font-size:' + sz + 'px;">' +
+		  '<a id=b' + n + ' href=javascript:clickBall(' + n + 
+		  ') onmouseover=Ball(' + n + ',"' + on + 
+		  '") onmouseout=Ball(' + n + ',"' + off + '")>' + 
+		  none + '</a></td>')
+	document.writeln('</tr>')
+}
+//-->
+</script>
+
+</table>
+<form name=scores method=post>
+Total Score:<span title="replay the same board"><input type=text name=show size=6 value=0 onFocus="blur()" onClick="replay()"></span>
+Click Score:<input type=text name=click size=6 value=0 onFocus="blur()">
+<span title="play a new board"><input type=submit value=New></span>
+</form>
+</center>
+</body></html>
