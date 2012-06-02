@@ -1,0 +1,30 @@
+# SliTaz package receipt.
+
+PACKAGE="zlib"
+VERSION="1.2.3"
+CATEGORY="base-system"
+SHORT_DESC="Compression library."
+MAINTAINER="pascal;bellard@slitaz.org"
+[ -n "$TARGET" ] || TARGET="i486"
+BUILD_DEPENDS="uclibc-cross-compiler-$TARGET"
+TARBALL="$PACKAGE-$VERSION.tar.bz2"
+WEB_SITE="http://www.zlib.net/"
+WGET_URL="http://www.gzip.org/zlib/$TARBALL"
+
+# Rules to configure and make the package.
+compile_rules()
+{
+	cd $PACKAGE-$VERSION
+	./configure --shared --prefix=/usr \
+		--libdir=/usr/share/uclibc-cross-compiler-$TARGET/lib \
+		--includedir=/usr/share/uclibc-cross-compiler-$TARGET/include
+	sed -i "s/=gcc/=uclibc-$TARGET-gcc/" Makefile
+	make
+}
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	mkdir -p $fs/usr/lib
+	cp -a $PACKAGE-$VERSION/libz.so* $fs/usr/lib
+}
