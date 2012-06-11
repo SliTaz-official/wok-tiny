@@ -2,7 +2,7 @@
 
 PACKAGE="ppp"
 VERSION="2.4.5"
-CATEGORY="tiny-slitaz"
+CATEGORY="network"
 SHORT_DESC="Point to Point Protocol (Internet with RTC modems)"
 MAINTAINER="pascal.bellard@slitaz.org"
 TARBALL="$PACKAGE-$VERSION.tar.gz"
