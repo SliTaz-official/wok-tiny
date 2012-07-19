@@ -41,7 +41,7 @@ post_install()
 "%d	stream	tcp	nowait	root	%s %s -b -f %s\n", 9100 + n++, \
 "/usr/sbin/p910nd", "/usr/sbin/p910nd", $1 }' >> $1/etc/inetd.conf
 	for dev in $DEVICES; do
-		mknod -m 660 $fs$dev c 6 ${dev#*lp}
+		mknod -m 660 $1$dev c 6 ${dev#*lp}
 	done
 }
 
