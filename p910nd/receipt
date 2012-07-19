@@ -26,7 +26,6 @@ genpkg_rules()
 {
 	mkdir -p $fs/usr $fs/etc/init.d $fs/dev
 	cp -a $_pkg/usr/sbin $fs/usr
-	mknod -m 660 $fs/dev/lp0 c 6 0
 	ln -s daemon $fs/etc/init.d/p910nd
 }
 
@@ -41,6 +40,9 @@ post_install()
 	echo "$DEVICES" | dos2unix | awk '{ if ($1 != "") printf \
 "%d	stream	tcp	nowait	root	%s %s -b -f %s\n", 9100 + n++, \
 "/usr/sbin/p910nd", "/usr/sbin/p910nd", $1 }' >> $1/etc/inetd.conf
+	for dev in $DEVICES; do
+		mknod -m 660 $fs$dev c 6 ${dev#*lp}
+	done
 }
 
 config_form()

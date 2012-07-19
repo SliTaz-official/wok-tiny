@@ -1,0 +1,124 @@
+# SliTaz package receipt.
+
+PACKAGE="rsync"
+VERSION="3.0.9"
+CATEGORY="network"
+SHORT_DESC="Utility that provides fast incremental."
+MAINTAINER="pankso@slitaz.org"
+[ -n "$TARGET" ] || TARGET="i486"
+BUILD_DEPENDS="uclibc-cross-compiler-$TARGET"
+DEPENDS=""
+TARBALL="$PACKAGE-$VERSION.tar.gz"
+WEB_SITE="http://rsync.samba.org/"
+WGET_URL="${WEB_SITE}ftp/$PACKAGE/$TARBALL"
+CONFIG_FILES="/etc/rsyncd.conf /etc/rsyncd.secrets"
+
+# Rules to configure and make the package.
+compile_rules()
+{
+	cd $src
+sed -i 's/cross_compiling=no/cross_compiling=yes/' configure.sh
+	./configure CC=uclibc-$TARGET-cc --host=i486-pc-linux-gnu \
+		--prefix=/usr \
+		--mandir=/usr/share/man \
+		--disable-iconv --disable-iconv-open \
+		--disable-acl-support --disable-xattr-support \
+		--with-included-popt --disable-debug \
+		$CONFIGURE_ARGS
+	sed -i  -e 's/HAVE_ICONV_H ./HAVE_ICONV_H 0/' \
+		-e 's/HAVE_ICONV_OPEN ./HAVE_ICONV_OPEN 0/' config.h
+	sed -i 's/-liconv//' Makefile
+	make &&
+	make DESTDIR=$PWD/_pkg install
+}
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	mkdir -p $fs/usr
+	cp -a $_pkg/usr/bin $fs/usr
+	# Config file is /etc/rsyncd.conf.
+	# User and passwd in /etc/rsyncd.secrets, syntax : user:passwd
+	#
+	cp -a stuff/etc $fs
+	chown root.root $fs/etc/init.d/*
+	chmod 0644 $fs/etc/rsyncd.conf
+
+}
+
+config_form()
+{
+	cat <<EOT
+<p>
+<input type="checkbox" name="START" > start rsync daemon during boot
+</p>
+<fieldset>
+<legend><i>/etc/rsyncd.conf</i></legend>
+<textarea name="RSYNCD_CONF" rows="15" cols="60" wrap="off">
+$(cat $1/etc/rsyncd.conf)
+</textarea>
+</fieldset>
+<fieldset>
+<legend><i>/etc/rsyncd.secrets</i></legend>
+<textarea name="RSYNCD_SECRETS" cols="60" wrap="off">
+$(cat $1/etc/rsyncd.secrets)
+</textarea>
+</fieldset>
+<fieldset>
+<legend><i>/etc/rsyncd.motd</i></legend>
+<textarea name="RSYNCD_MOTD" rows="10" cols="60" wrap="off">
+</textarea>
+</fieldset>
+EOT
+}
+
+config_note()
+{
+	cat <<EOT
+<script type="text/javascript">
+function update_form()
+{
+	var hide = true
+	for (var i = 0; i < document.forms.length; i++) {
+		for (var j = 0; j < document.forms[i].elements.length; j++) {
+			var obj = document.forms[i].elements[j]
+			if (obj.name == "START" && obj.checked == true)
+				hide = false
+		}
+	}	
+	for (var i = 0; i < document.forms.length; i++) {
+		for (var j = 0; j < document.forms[i].elements.length; j++) {
+			var obj = document.forms[i].elements[j]
+			switch (obj.name) {
+			case "RSYNCD_CONF" :
+			case "RSYNCD_SECRETS" :
+			case "RSYNCD_MOTD" :
+				obj.disabled = hide; break;
+			}
+		}
+	}	
+}
+update_form()
+window.onchange = update_form
+//-->
+</script>
+EOT
+}
+
+post_install()
+{
+	if [ -n "$START" ]; then
+		cat > $1/etc/rsyncd.conf <<EOT
+$RSYNCD_CONF
+EOT
+		cat > $1/etc/rsyncd.secrets <<EOT
+$RSYNCD_SECRETS
+EOT
+		cat > $1/etc/rsyncd.motd <<EOT
+$RSYNCD_MOTD
+EOT
+	else
+		rm -f $1/etc/rsyncd.conf $1/etc/rsyncd.secrets \
+			$1/etc/init.d/rsyncd
+	fi
+}
