@@ -48,6 +48,9 @@ genpkg_rules()
 
 config_form()
 {
+	[ "$START" == "on" ] && START="ckecked=ckecked " || START=
+	[ -n "$RSYNCD_CONF" ] || RSYNCD_CONF="$(cat $1/etc/rsyncd.conf)"
+	[ -n "$RSYNCD_SECRETS" ] || RSYNCD_SECRETS="$(cat $1/etc/rsyncd.secrets)
 	cat <<EOT
 <p>
 <input type="checkbox" name="START" > start rsync daemon during boot
@@ -55,18 +58,19 @@ config_form()
 <fieldset>
 <legend><i>/etc/rsyncd.conf</i></legend>
 <textarea name="RSYNCD_CONF" rows="15" cols="60" wrap="off">
-$(cat $1/etc/rsyncd.conf)
+$RSYNCD_CONF
 </textarea>
 </fieldset>
 <fieldset>
 <legend><i>/etc/rsyncd.secrets</i></legend>
 <textarea name="RSYNCD_SECRETS" cols="60" wrap="off">
-$(cat $1/etc/rsyncd.secrets)
+$RSYNCD_SECRETS
 </textarea>
 </fieldset>
 <fieldset>
 <legend><i>/etc/rsyncd.motd</i></legend>
 <textarea name="RSYNCD_MOTD" rows="10" cols="60" wrap="off">
+$RSYNCD_MOTD
 </textarea>
 </fieldset>
 EOT

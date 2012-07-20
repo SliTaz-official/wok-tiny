@@ -48,6 +48,7 @@ genpkg_rules()
 config_form()
 {
 	[ -n "$PASSWORD"   ] || PASSWORD=root
+	[ -n "$HOSTNAME"   ] || HOSTNAME=slitaz
 	[ -n "$INTERFACE"  ] || INTERFACE=eth0
 	[ -n "$IP"         ] || IP=192.168.0.6
 	[ -n "$NETMASK"    ] || NETMASK=255.255.255.0
@@ -60,6 +61,10 @@ config_form()
 <tr>
 <td>Root password</td>
 <td><input type="text" name="PASSWORD" value="$PASSWORD" /></td>
+</tr>
+<tr>
+<td>Host name</td>
+<td><input type="text" name="HOSTNAME" value="$HOSTNAME" /></td>
 </tr>
 <tr>
 <td>Interface</td>
@@ -136,6 +141,7 @@ post_install()
 grep -qs ^root:: /etc/passwd /etc/shadow && passwd
 EOT
 	fi
+	[ -n "$HOSTNAME" ] && echo $HOSTNAME > $1/etc/hostname
 	[ -n "$FSTAB" ] && dos2unix >> $1/etc/fstab <<EOT
 $FSTAB
 EOT
