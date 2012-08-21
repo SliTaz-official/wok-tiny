@@ -58,11 +58,13 @@ EOT
 # Post message when installing.
 post_install()
 {
-	grep -q inetd $1/etc/rcS.conf ||
-	sed -i 's/^RUN_DAEMONS="/&inetd /' $1/etc/rcS.conf
-	grep -q dropbear $1/etc/inetd.conf || cat >> $1/etc/inetd.conf <<EOT
+	if [ "$STARTDAEMON" = "ON" ]; then
+		grep -q inetd $1/etc/rcS.conf ||
+		sed -i 's/^RUN_DAEMONS="/&inetd /' $1/etc/rcS.conf
+		grep -q dropbear $1/etc/inetd.conf || cat >> $1/etc/inetd.conf <<EOT
 ssh	stream	tcp	nowait	root	/usr/sbin/dropbear	/usr/sbin/dropbear -i $DROPBEAR_OPTS
 EOT
+	fi
 	dos2unix <<EOT | uudecode - > $1/etc/dropbear/dropbear_dss_host_key
 $DSSKEY
 EOT
@@ -96,6 +98,8 @@ EOT
 	RSAPUB="$(dropbearkey  -y -f /tmp/mkssh$$ | grep ^ssh)"
 	rm -f /tmp/mkssh$$
 	cat <<EOT
+<input type="checkbox" name="STARTDAEMON" value="ON" checked="checked" />
+Start server during boot<br>
 <table>
 <tr>
 <td>Server options</td>
