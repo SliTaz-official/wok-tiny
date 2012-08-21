@@ -17,7 +17,7 @@ CONFIG_FILES="/etc/rsyncd.conf /etc/rsyncd.secrets"
 compile_rules()
 {
 	cd $src
-sed -i 's/cross_compiling=no/cross_compiling=yes/' configure.sh
+	sed -i 's/cross_compiling=no/cross_compiling=yes/' configure.sh
 	./configure CC=uclibc-$TARGET-cc --host=i486-pc-linux-gnu \
 		--prefix=/usr \
 		--mandir=/usr/share/man \
@@ -120,6 +120,11 @@ $RSYNCD_SECRETS
 EOT
 		cat > $1/etc/rsyncd.motd <<EOT
 $RSYNCD_MOTD
+EOT
+		grep -q inetd $1/etc/rcS.conf ||
+		sed -i 's/^RUN_DAEMONS="/&inetd /' $1/etc/rcS.conf
+		grep -q rsync $1/etc/inetd.conf || cat >> $1/etc/inetd.conf <<EOT
+rsync	stream	tcp	nowait	root	/usr/bin/rsync	/usr/bin/rsync --daemon
 EOT
 	else
 		rm -f $1/etc/rsyncd.conf $1/etc/rsyncd.secrets \

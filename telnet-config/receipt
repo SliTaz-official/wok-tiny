@@ -16,6 +16,9 @@ genpkg_rules()
 
 post_install()
 {
-	grep -q telnetd $1/etc/rcS.conf ||
-	sed -i 's/^RUN_DAEMONS="/&telnetd /' $1/etc/rcS.conf
+	grep -q inetd $1/etc/rcS.conf ||
+	sed -i 's/^RUN_DAEMONS="/&inetd /' $1/etc/rcS.conf
+	grep -q telnetd $1/etc/inetd.conf || cat >> $1/etc/inetd.conf <<EOT
+telnet	stream	tcp	nowait	root	/usr/sbin/telnetd	/usr/sbin/telnetd -i
+EOT
 }

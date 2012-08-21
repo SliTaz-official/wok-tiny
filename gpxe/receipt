@@ -39,8 +39,6 @@ post_install()
 	sed -i 's/^RUN_DAEMONS="/&inetd /' $1/etc/rcS.conf
 	grep -q udhcpd $1/etc/rcS.conf ||
 	sed -i 's/^RUN_DAEMONS="/&udhcpd /' $1/etc/rcS.conf
-	grep -q tftpd $1/etc/rcS.conf ||
-	sed -i 's/^RUN_DAEMONS="/&tftpd /' $1/etc/rcS.conf
 	grep -q tftpd $1/etc/inetd.conf || cat >> $1/etc/inetd.conf <<EOT
 tftp	dgram	udp	wait	root	/usr/bin/tftpd /usr/bin/tftpd -r /usr/share/boot
 EOT

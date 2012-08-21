@@ -18,13 +18,10 @@ genpkg_rules()
 
 post_install()
 {
-	grep -q httpd $1/etc/rcS.conf ||
-	sed -i 's/^RUN_DAEMONS="/&httpd /' $1/etc/rcS.conf
-	grep -q HTTPD_OPTIONS $1/etc/daemons.conf ||
-	cat >> $1/etc/daemons.conf <<EOT
-
-# Http daemon options.
-HTTPD_OPTIONS="-u 0:0"
+	grep -q inetd $1/etc/rcS.conf ||
+	sed -i 's/^RUN_DAEMONS="/&inetd /' $1/etc/rcS.conf
+	grep -q /httpd $1/etc/inetd.conf || cat >> $1/etc/inetd.conf <<EOT
+http	stream	tcp	nowait	root	/usr/sbin/httpd	/usr/sbin/httpd -i -u 0:0
 EOT
 	while read line comment ; do
 		grep -qs "^$line" $1/etc/httpd.conf && continue

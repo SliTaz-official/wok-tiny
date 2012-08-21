@@ -58,13 +58,11 @@ EOT
 # Post message when installing.
 post_install()
 {
-	cat >> $1/etc/daemons.conf <<EOT
-
-# Dropbear SSH server options.
-DROPBEAR_OPTIONS="$DROPBEAR_OPTS"
+	grep -q inetd $1/etc/rcS.conf ||
+	sed -i 's/^RUN_DAEMONS="/&inetd /' $1/etc/rcS.conf
+	grep -q dropbear $1/etc/inetd.conf || cat >> $1/etc/inetd.conf <<EOT
+ssh	stream	tcp	nowait	root	/usr/sbin/dropbear	/usr/sbin/dropbear -i $DROPBEAR_OPTS
 EOT
-	grep -qs 'dropbear ' $1/etc/rcS.conf ||
-	sed -i 's/^RUN_DAEMONS="/&dropbear /' $1/etc/rcS.conf
 	dos2unix <<EOT | uudecode - > $1/etc/dropbear/dropbear_dss_host_key
 $DSSKEY
 EOT

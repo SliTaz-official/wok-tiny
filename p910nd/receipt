@@ -34,8 +34,6 @@ post_install()
 	[ -n "$DEVICES" ] || DEVICES="/dev/lp0"
 	grep -q inetd $1/etc/rcS.conf ||
 	sed -i 's/^RUN_DAEMONS="/&inetd /' $1/etc/rcS.conf
-	grep -q p910nd $1/etc/rcS.conf ||
-	sed -i 's/^RUN_DAEMONS="/&p910nd /' $1/etc/rcS.conf
 	grep -q p910nd $1/etc/inetd.conf || 
 	echo "$DEVICES" | dos2unix | awk '{ if ($1 != "") printf \
 "%d	stream	tcp	nowait	root	%s %s -b -f %s\n", 9100 + n++, \

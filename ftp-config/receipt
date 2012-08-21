@@ -28,7 +28,7 @@ post_install()
 	[ -n "$UPLOAD" ] && ROOT="-w $ROOT"
 	grep -q inetd $1/etc/rcS.conf ||
 	sed -i 's/^RUN_DAEMONS="/&inetd /' $1/etc/rcS.conf
-	cat >> $1/etc/inetd.conf <<EOT
-21	stream	tcp	nowait	root	/usr/sbin/ftpd /usr/sbin/ftpd $ROOT
+	grep -q /ftpd $1/etc/inetd.conf || cat >> $1/etc/inetd.conf <<EOT
+ftp	stream	tcp	nowait	root	/usr/sbin/ftpd /usr/sbin/ftpd $ROOT
 EOT
 }
