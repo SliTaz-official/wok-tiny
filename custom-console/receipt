@@ -13,14 +13,11 @@ CONFIG_FILES="/etc/inittab"
 genpkg_rules()
 {
 	mkdir -p $fs/etc
-	tazpkg get slitaz-boot-scripts
-	tazpkg extract slitaz-boot-scripts*.tazpkg
-	mv slitaz-boot-scripts*/fs/etc/inittab fs/etc || return 1
-	sed -i '/^tty[2-9]::/d' fs/etc/inittab
 }
 
 post_install()
 {
+	sed -i '/^tty[2-9]::/d' $1/etc/inittab
 	sed -i "s|^tty1:.*|$TTYS::respawn:/sbin/getty $SPEED $TTYS|" \
 		$1/etc/inittab
 }

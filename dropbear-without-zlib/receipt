@@ -1,11 +1,12 @@
 # SliTaz package receipt.
 
 PACKAGE="dropbear-without-zlib"
+SOURCE="dropbear"
 VERSION="0.53"
 CATEGORY="security"
 SHORT_DESC="Light SSH client and server without compression support."
 MAINTAINER="pascal.bellard@slitaz.org"
-TARBALL="$PACKAGE-$VERSION.tar.gz"
+TARBALL="$SOURCE-$VERSION.tar.gz"
 DEPENDS="libutil"
 [ -n "$TARGET" ] || TARGET="i486"
 BUILD_DEPENDS="dropbear uclibc-cross-compiler-$TARGET"
