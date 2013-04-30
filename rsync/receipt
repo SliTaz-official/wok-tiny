@@ -50,7 +50,7 @@ config_form()
 {
 	[ "$START" == "on" ] && START="ckecked=ckecked " || START=
 	[ -n "$RSYNCD_CONF" ] || RSYNCD_CONF="$(cat $1/etc/rsyncd.conf)"
-	[ -n "$RSYNCD_SECRETS" ] || RSYNCD_SECRETS="$(cat $1/etc/rsyncd.secrets)
+	[ -n "$RSYNCD_SECRETS" ] || RSYNCD_SECRETS="$(cat $1/etc/rsyncd.secrets)"
 	cat <<EOT
 <p>
 <input type="checkbox" name="START" > start rsync daemon during boot
