@@ -5,6 +5,7 @@ VERSION="2.6.37"
 CATEGORY="base-system"
 SHORT_DESC="Kernel i386 with ppp, ne2k-isa, 3c509, ide and ext3"
 MAINTAINER="devel@slitaz.org"
+LICENSE="GPL2"
 WEB_SITE="http://www.kernel.org/"
 WANTED="kernel-modular"
 
