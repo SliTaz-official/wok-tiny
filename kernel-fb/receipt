@@ -1,0 +1,20 @@
+# SliTaz package receipt.
+
+PACKAGE="kernel-fb"
+VERSION="2.6.37"
+CATEGORY="base-system"
+SHORT_DESC="Kernel i386 with mouses, video frame buffers and some ethernet cards, but no disk."
+MAINTAINER="devel@slitaz.org"
+LICENSE="GPL2"
+WEB_SITE="http://www.kernel.org/"
+WANTED="kernel-modular"
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+    mkdir $fs/boot
+    cp -a $WOK/kernel-modular/linux-$VERSION/$PACKAGE $fs/boot/bzImage
+    cp -a $WOK/kernel-modular/linux-$VERSION/System.map-${PACKAGE#kernel-} $fs/boot/System.map
+    cp -a $WOK/kernel-modular/linux-$VERSION/config-${PACKAGE#kernel-} $fs/boot/config
+    cp -a $WOK/kernel-modular/linux-$VERSION/config-busybox $fs/boot
+}
