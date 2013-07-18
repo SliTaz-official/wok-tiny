@@ -21,7 +21,7 @@ compile_rules()
 	mkdir -p $src 2> /dev/null
 	cd $src
 	wget -O index.html \
-		$(dirname $WEB_SITE)/archive/toledo_javascript_chess_3.html
+		$WEB_SITE/archive/toledo_javascript_chess_3.html
 	sed -i -e 's/<select/<input type=\\"button\\" value=\\"\&#9818; \&hArr; \&#9812;\\" onclick=\\"yy^=8;Z()\\">&/' \
 	  -e 's/><option.*$/>";/' -e "s/ style='font-size:20px'//" \
 	  -e 's/50px/"+P+"px/g' -e 's/=60/="+H+"/g' \

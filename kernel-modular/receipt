@@ -86,7 +86,7 @@ EOT
 	cd ../..
 
 	# Build bzImage without modules first
-	for i in isa lguest ; do
+	for i in isa lguest usbstorage fb ; do
 		cp -f ../stuff/$SOURCE-$VERSION-slitaz.config-$TARGET-$i .config
 		# We can't keep every driver in staging 
 		sed -i -e 's/^CONFIG_RTL8192/#&/' \

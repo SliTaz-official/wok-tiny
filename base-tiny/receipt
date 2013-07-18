@@ -30,6 +30,7 @@ busybox			/etc/inetd.conf
 slitaz-base-files	/etc/fstab
 slitaz-base-files	/etc/group
 slitaz-base-files	/etc/passwd
+slitaz-base-files	/etc/gshadow
 slitaz-base-files	/etc/shadow
 slitaz-boot-scripts	/etc/inittab
 slitaz-boot-scripts	/etc/network.conf
@@ -60,7 +61,7 @@ config_form()
 	cat <<EOT
 <table>
 <tr>
-<td>Root password</td>
+<td>Root password (empty=disable)</td>
 <td><input type="text" name="PASSWORD" value="$PASSWORD" /></td>
 </tr>
 <tr>
@@ -130,11 +131,16 @@ post_install()
 	       -e "s/^DHCP=.*/DHCP=\"$DHCP\"/" \
 	       -e "s/^IP=.*/IP=\"$IP\"/" $1/etc/network.conf
 	if [ -n "$PASSWORD" ]; then
-		mkdir $1/lib
-		cp -a /lib/lib[cm][.-]* /lib/ld* $1/lib
-		cp -a /bin/busybox $1/lib/chpasswd
-		echo "root:$PASSWORD" | chroot $1/ /lib/chpasswd -m
-		rm -rf $1/lib
+		case "$PASSWORD" in
+		\$1\$*)
+			sed -i "s|^root:[^:]*|root:$PASSWORD|" $1/etc/shadow ;;
+		*)
+			mkdir $1/lib
+			cp -a /lib/lib[cm][.-]* /lib/ld* $1/lib
+			cp -a /bin/busybox $1/lib/chpasswd
+			echo "root:$PASSWORD" | chroot $1/ /lib/chpasswd -m
+			rm -rf $1/lib
+		esac
 	else
 		sed -i 's/^root:[^:]*:/root::/' $1/etc/passwd
 		mkdir $1/root 2> /dev/null

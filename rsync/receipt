@@ -54,7 +54,7 @@ config_form()
 	[ -n "$RSYNCD_SECRETS" ] || RSYNCD_SECRETS="$(cat $1/etc/rsyncd.secrets)"
 	cat <<EOT
 <p>
-<input type="checkbox" name="START" > start rsync daemon during boot
+<input type="checkbox" name="START" $START> start rsync daemon during boot
 </p>
 <fieldset>
 <legend><i>/etc/rsyncd.conf</i></legend>
