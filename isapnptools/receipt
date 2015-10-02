@@ -10,13 +10,11 @@ LICENSE="GPL2"
 BUILD_DEPENDS="uclibc-cross-compiler-$TARGET"
 TARBALL="$PACKAGE-$VERSION.tgz"
 WEB_SITE="http://www.roestock.demon.co.uk/isapnptools/"
-WGET_URL="ftp://metalab.unc.edu/pub/Linux/system/hardware/$TARBALL"
+WGET_URL="http://mirror.slitaz.org/sources/packages/i/$TARBALL"
 
 # Rules to configure and make the package.
 compile_rules()
 {
-	cd $src
-
 	# Fix cross tools prefix...
 	export PATH=$PWD:$PATH
 	PREFIX=$TARGET-uclibc-gnu
@@ -30,12 +28,12 @@ compile_rules()
 		--prefix=/usr --bindir=/bin \
 		--libexecdir=/usr/bin --mandir=/usr/share/man
 	make &&
-	make DESTDIR=$PWD/_pkg install
+	make DESTDIR=$DESTDIR install
 }
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
 	# move /usr/sbin/* /sbin to use pnptools *before* mounting /usr
-	cp -a $_pkg/usr/sbin $fs
+	cp -a $install/usr/sbin $fs
 }

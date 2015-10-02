@@ -1,0 +1,54 @@
+# SliTaz package receipt.
+
+PACKAGE="module-ne"
+VERSION="2.6.14"
+CATEGORY="base-system"
+SHORT_DESC="Kernel module for the ne2000 driver"
+MAINTAINER="pascal.bellard@slitaz.org"
+LICENSE="GPL2"
+WEB_SITE="http://tiny.slitaz.org/"
+WANTED="linux"
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	local path
+	export src=$WOK/$WANTED/source/linux-$VERSION
+	export _pkg=$WOK/$WANTED/install
+	path=lib/modules/$(ls $_pkg/lib/modules)/kernel
+	mkdir -p $fs/$path
+	$src/slitaz/list_modules.sh drivers/net/${PACKAGE#*-}* | while read module; do
+		dir=$path/$(dirname $module)
+		[ -d $fs/$dir ] || mkdir -p $fs/$dir
+		cp -a $_pkg/$path/$module $fs/$dir
+	done
+}
+
+# Post install/remove commands for Tazpkg.
+post_install()
+{
+	[ "$IRQNE2K" ] && IRQNE2K="|irq=${IRQNE2K// /,}"
+	[ "$IONE2K" ] && IONE2K="|io=${IONE2K// /,}"
+	[ "$BADNE2K" == "ON" ] && BADNE2K="|bad" || BADNE2K=""
+	echo "${PACKAGE#*-}${IONE2K:-|io=0x300}$IRQNE2K$BADNE2K" >> $1/modules
+}
+
+config_form()
+{
+	cat <<EOT
+<h4>NE2000 isa Ethernet driver</h4>
+<table>
+<tr>
+<td>I/O base (required)</td>
+<td><input type="text" name="IONE2K" value="0x300" 
+title="Likely 0x300 0x280 0x320 0x340 0x360 or 0x380" /></td>
+</tr>
+<tr>
+<td>IRQ (optionnal)</td>
+<td><input type="text" name="IRQNE2K" /></td>
+</tr>
+</table>
+<input type="checkbox" name="BADNE2K" value="ON" />
+Accept card with bad signatures<br>
+EOT
+}

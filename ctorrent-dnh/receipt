@@ -15,20 +15,18 @@ WGET_URL="$SF_MIRROR/dtorrent/$TARBALL"
 # Rules to configure and make the package.
 compile_rules()
 {
-	mv ${PACKAGE}$VERSION $PACKAGE-$VERSION 2>/dev/null
-	cd $src
 	./configure \
 		--prefix=/usr \
 		--with-ssl=no \
 		--host=$TARGET-pc-linux-gnu \
 		CC=uclibc-$TARGET-cc &&
-	make
-	make DESTDIR=$PWD/_pkg install
+	make &&
+	make DESTDIR=$DESTDIR install
 }
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
 	mkdir -p $fs/usr
-	cp -a $_pkg/usr/bin $fs/usr
+	cp -a $install/usr/bin $fs/usr
 }

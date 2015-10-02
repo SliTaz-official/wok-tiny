@@ -24,20 +24,19 @@ compile_rules()
 	local i
 	local DROPBEARS
 	DROPBEARS="dbclient scp"
-	cd $src
 	sed -i  -e 's|/usr/X11R6/bin/xauth|/usr/bin/xauth|' \
 		-e 's|/usr/libexec/sftp-server|/usr/sbin/sftp-server|' \
 		options.h
 	./configure --prefix=/usr --without-pam --host=$TARGET-pc-linux-gnu \
 		--disable-zlib CC=uclibc-$TARGET-cc &&
 	make PROGRAMS="dropbear $DROPBEARS" MULTI=1 &&
-	install -d -m 755 $PWD/_pkg/usr/sbin &&
-	install -m 755 dropbearmulti $PWD/_pkg/usr/sbin/dropbear &&
-	chown root $PWD/_pkg/usr/sbin/dropbear &&
-	chgrp 0 $PWD/_pkg/usr/sbin/dropbear &&
-	install -d -m 755 $PWD/_pkg/usr/bin &&
+	install -d -m 755 $DESTDIR/usr/sbin &&
+	install -m 755 dropbearmulti $DESTDIR/usr/sbin/dropbear &&
+	chown root $DESTDIR/usr/sbin/dropbear &&
+	chgrp 0 $DESTDIR/usr/sbin/dropbear &&
+	install -d -m 755 $DESTDIR/usr/bin &&
 	for i in $DROPBEARS ssh; do
-		ln -s ../sbin/dropbear $PWD/_pkg/usr/bin/$i
+		ln -s ../sbin/dropbear $DESTDIR/usr/bin/$i
 	done
 }
 
@@ -45,8 +44,8 @@ compile_rules()
 genpkg_rules()
 {
 	mkdir -p $fs/usr $fs/etc/init.d $fs/etc/dropbear
-	cp -a $_pkg/usr/bin $fs/usr
-	cp -a $_pkg/usr/sbin $fs/usr
+	cp -a $install/usr/bin $fs/usr
+	cp -a $install/usr/sbin $fs/usr
 	ln -s daemon $fs/etc/init.d/dropbear
 	cat > $fs/etc/dropbear/banner <<EOT
 

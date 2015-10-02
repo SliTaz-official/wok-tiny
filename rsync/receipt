@@ -1,13 +1,13 @@
 # SliTaz package receipt.
 
 PACKAGE="rsync"
-VERSION="3.0.9"
+VERSION="3.1.1"
 CATEGORY="network"
 SHORT_DESC="Utility that provides fast incremental."
 MAINTAINER="pankso@slitaz.org"
 LICENSE="GPL"
 [ -n "$TARGET" ] || TARGET="i486"
-BUILD_DEPENDS="uclibc-cross-compiler-$TARGET"
+BUILD_DEPENDS="uclibc-cross-compiler-$TARGET perl"
 DEPENDS=""
 TARBALL="$PACKAGE-$VERSION.tar.gz"
 WEB_SITE="http://rsync.samba.org/"
@@ -17,7 +17,6 @@ CONFIG_FILES="/etc/rsyncd.conf /etc/rsyncd.secrets"
 # Rules to configure and make the package.
 compile_rules()
 {
-	cd $src
 	sed -i 's/cross_compiling=no/cross_compiling=yes/' configure.sh
 	./configure CC=uclibc-$TARGET-cc --host=i486-pc-linux-gnu \
 		--prefix=/usr \
@@ -30,18 +29,18 @@ compile_rules()
 		-e 's/HAVE_ICONV_OPEN ./HAVE_ICONV_OPEN 0/' config.h
 	sed -i 's/-liconv//' Makefile
 	make &&
-	make DESTDIR=$PWD/_pkg install
+	make DESTDIR=$DESTDIR install
 }
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
 	mkdir -p $fs/usr
-	cp -a $_pkg/usr/bin $fs/usr
+	cp -a $install/usr/bin $fs/usr
 	# Config file is /etc/rsyncd.conf.
 	# User and passwd in /etc/rsyncd.secrets, syntax : user:passwd
 	#
-	cp -a stuff/etc $fs
+	cp -a $stuff/etc $fs
 	chown root.root $fs/etc/init.d/*
 	chmod 0644 $fs/etc/rsyncd.conf
 

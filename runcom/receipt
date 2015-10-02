@@ -19,14 +19,14 @@ compile_rules()
 		  sed '/linuxstart/!d;s/.*href="\([^"]*\)".*/\1/')
 	wget $WEB_SITE/$tarball
 	tar xzf $tarball
-	mkdir -p _pkg/usr/bin
-	uclibc-$TARGET-cc -o _pkg/usr/bin/runcom $(find . -name runcom.c)
+	mkdir -p $DESTDIR/usr/bin
+	uclibc-$TARGET-cc -o $DESTDIR/usr/bin/runcom $(find . -name runcom.c)
 }
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
-	cp -a $_pkg/* $fs
+	cp -a $install/* $fs
 }
 
 # Post install command for Tazpkg.

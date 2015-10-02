@@ -1,22 +1,22 @@
 # SliTaz package receipt.
 
 PACKAGE="module-3c509"
-VERSION="2.6.37"
+VERSION="2.6.14"
 CATEGORY="base-system"
 SHORT_DESC="Kernel module for the 3c509 driver"
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="GPL2"
 WEB_SITE="http://tiny.slitaz.org/"
-WANTED="kernel-modular"
+WANTED="linux"
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
 	local path
-	path=lib/modules/$VERSION-slitaz/kernel
+	export src=$WOK/$WANTED/source/linux-$VERSION
+	export _pkg=$WOK/$WANTED/install
+	path=lib/modules/$(ls $_pkg/lib/modules)/kernel
 	mkdir -p $fs/$path
-	export src=$WOK/$WANTED/linux-$VERSION
-	export _pkg=$src/_pkg
 	$src/slitaz/list_modules.sh drivers/net/${PACKAGE#*-}* | while read module; do
 		dir=$path/$(dirname $module)
 		[ -d $fs/$dir ] || mkdir -p $fs/$dir
@@ -27,5 +27,52 @@ genpkg_rules()
 # Post install/remove commands for Tazpkg.
 post_install()
 {
-	chroot "$1/" depmod -a $VERSION-slitaz
+	[ "$IRQ3C509" ] && IRQ3C509="|irq=${IRQ3C509// /,}"
+	[ "$XCVR3C509" ] && XCVR3C509="|xcvr=$XCVR3C509"
+	echo "${PACKAGE#*-}$IRQ3C509|debug=${DBG3C509:-0}$XCVR3C509|max_interrupt_work=${MAXE3C509:-10}" >> $1/modules
+}
+
+config_form()
+{
+	cat <<EOT
+<h4>3Com Etherlink III (3c509, 3c509B) ISA/PnP Ethernet driver</h4>
+<table>
+<tr>
+<td>IRQ</td>
+<td><input type="text" name="IRQ3C509" /></td>
+</tr>
+<tr>
+<td>Tranceiver</td>
+<td><select name="XCVR3C509">
+	<option value="">default</option>
+	<option value="0"$([ "$XCVR3C509" == "0" ] && echo ' selected="selected"')>internal</option>
+	<option value="1"$([ "$XCVR3C509" == "1" ] && echo ' selected="selected"')>external</option>
+</select></td>
+</tr>
+<tr>
+<td>Maximum events handled per interrupt</td>
+<td><select name="MAXE3C509">
+EOT
+	for i in $(seq 10 -1 1); do
+	cat <<EOT
+	<option value="$i"$([ "$MAXE3C509" == "$i" ] && echo ' selected="selected"')>$i</option>
+EOT
+	done
+	cat <<EOT
+</select></td>
+</tr>
+<tr>
+<td>Debug</td>
+<td><select name="DBG3C509">
+EOT
+	for i in $(seq 0 6); do
+	cat <<EOT
+	<option value="$i"$([ "$DBG3C509" == "$i" ] && echo ' selected="selected"')>$i</option>
+EOT
+	done
+	cat <<EOT
+</select></td>
+</tr>
+</table>
+EOT
 }

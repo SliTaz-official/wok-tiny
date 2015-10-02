@@ -18,8 +18,8 @@ compile_rules()
 			tazpkg get $pkg
 			tazpkg extract $pkg*.tazpkg
 		fi
-		mkdir -p fs$(dirname $file)
-		mv $pkg*/fs$file fs$(dirname $file) || return 1
+		mkdir -p $DESTDIR$(dirname $file)
+		mv $pkg*/fs$file $DESTDIR$(dirname $file) || return 1
 	done << EOT
 gpxe-pxe	/usr/share/boot/gpxe.pxe
 EOT
@@ -28,7 +28,7 @@ EOT
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
-	cp -a fs/. $fs
+	cp -a $install/. $fs
 }
 
 post_install()

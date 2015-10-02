@@ -1,0 +1,88 @@
+# SliTaz package receipt.
+
+PACKAGE="linux"
+VERSION="2.6.14"
+CATEGORY="base-system"
+SHORT_DESC="The Linux kernel."
+TARGET="i486"
+MAINTAINER="devel@slitaz.org"
+LICENSE="GPL2"
+TARBALL="$PACKAGE-$VERSION.tar.bz2"
+WEB_SITE="http://www.kernel.org/"
+WGET_URL="https://www.kernel.org/pub/linux/kernel/v${VERSION:0:3}/$TARBALL"
+WEB_SITE2="http://elinux.org/Linux_Tiny"
+PATCH="https://www.selenic.com/tiny/2.6.14-tiny1.patch.bz2"
+AUTO_SELECTION="always"
+
+BUILD_DEPENDS="slitaz-toolchain perl git lzma wget gcc2 advancecomp"
+
+# Rules to configure and make the package.
+compile_rules()
+{
+	[ -s $SRC/$(basename $PATCH) ] ||
+	wget --no-check-certificate -O $SRC/$(basename $PATCH) $PATCH
+	bzcat $SRC/$(basename $PATCH) | patch -p1
+	sed -i 's|\([>\.]\)val|\1u.val|;s|\([>\.]\)next|\1u.next|;216s|};|} u;|' lib/inflate.c
+	sed '/DEBUG/,/* kstrdup/d' < mm/slab.c > mm/kstrdup.c
+	echo 'obj-y += kstrdup.o' >> mm/Makefile
+	sed -i 's|3.1024|11*256|' arch/i386/boot/compressed/misc.c
+	which advdef 2> /dev/null &&
+	sed -i 's|gzip)|&\n	advdef -z4 $@|' usr/Makefile arch/i386/boot/compressed/Makefile
+
+	if [ ! -s $WOK/busybox/source/busybox*/rootfs.cpio ]; then
+		tazwok cook busybox
+	fi
+	cp $WOK/busybox/source/busybox*/rootfs.cpio $src
+	cp $WOK/busybox/source/busybox*/.config $src/config-busybox
+	mkdir $src/slitaz
+	cp $stuff/list_modules.sh $src/slitaz
+
+	sed -i 's/^config %config/config/' Makefile
+	cp $stuff/linux-$VERSION-slitaz.config .config
+	yes '' | make ARCH=i386 HOSTCC=gcc-2 config
+	make ARCH=i386 CC=gcc-2 HOSTCC=gcc-2 -j 4 bzImage
+	grep -q "CONFIG_MODULES=y" .config &&
+	make ARCH=i386 CC=gcc-2 HOSTCC=gcc-2 -j 4 modules &&
+	make ARCH=i386 INSTALL_MOD_PATH=$DESTDIR -j 1 modules_install || true
+}
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	mkdir $fs/boot
+	cp -a $src/arch/i386/boot/bzImage $fs/boot/
+	cp -a $src/System.map $fs/boot/
+	cp -a $src/.config $fs/boot/config
+	cp -a $src/config-busybox $fs/boot
+}
+
+# Pre and post install commands for Tazpkg.
+post_install()
+{
+    echo "Processing post-install commands..."
+    chroot "$1/" depmod -a $VERSION-slitaz
+    # GRUB stuff.
+    if [ -f "$1/boot/grub/menu.lst" ]; then
+    	root_dev=`cat $1/boot/grub/menu.lst | grep root= | sed 's/.*root=\([^ ]*\).*/\1/' | head -n 1`
+		grub_dev=`cat $1/boot/grub/menu.lst | grep "root (" | head -n 1`
+		# Add new kernel entry in case of upgrade for installed system.
+		if ! grep -q $SOURCE-$VERSION-slitaz $1/boot/grub/menu.lst; then
+    		cat >> $1/boot/grub/menu.lst << EOT
+
+title SliTaz GNU/Linux (Kernel $VERSION-slitaz)
+$grub_dev
+kernel /boot/vmlinuz-$VERSION-slitaz root=$root_dev
+EOT
+		fi
+		# Display information message.
+    	cat <<EOT
+----
+GRUB is installed, these tree lines must be in your /boot/grub/menu.lst:
+
+title  SliTaz GNU/Linux (Kernel $VERSION-slitaz)
+$grub_dev
+kernel /boot/vmlinuz-$VERSION-slitaz root=$root_dev
+----
+EOT
+	fi
+}

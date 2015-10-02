@@ -14,7 +14,7 @@ CONFIG_FILES="/etc/daemons.conf /etc/rcS.conf"
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
-	cp -a stuff/. $fs
+	cp -a $stuff/. $fs
 }
 
 post_install()

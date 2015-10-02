@@ -1,0 +1,36 @@
+# /etc/profile: System-wide .profile file for the Bourne shells
+
+PATH="/usr/sbin:/usr/bin:/sbin:/bin"
+LD_LIBRARY_PATH="/usr/lib:/lib"
+
+# Prompt format for Ash
+# Light green and blue colored prompt.
+PS1='\u@\h:\w\$ '
+
+# Max 64M for programs (prevent memory leak crashes)
+ulimit -d 65536
+ulimit -m 65536
+
+# Screen display for X and encoding for GTK+ apps.
+[ -n "$DISPLAY" ] || DISPLAY=:0.0
+G_FILENAME_ENCODING=UTF-8
+
+# Export all variables defined above and set mask.
+#
+export PATH LD_LIBRARY_PATH PS1 DISPLAY G_FILENAME_ENCODING
+umask 022
+
+# Locale and timezone settings.
+#
+if [ -s "/etc/locale.conf" ]; then
+	. /etc/locale.conf
+	export LANG LC_ALL
+fi
+if [ -s "/etc/TZ" ]; then
+	TZ=`cat /etc/TZ`
+	export TZ
+fi
+ip=$(ifconfig eth0 2> /dev/null | awk '/inet addr/ { print substr($2,6) }')
+case "$TERM" in
+xterm*|rxvt*) echo -ne "\033]0;$(hostname) $(cat /etc/slitaz-release) $ip\007";;
+esac

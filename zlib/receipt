@@ -15,7 +15,6 @@ WGET_URL="http://www.gzip.org/zlib/$TARBALL"
 # Rules to configure and make the package.
 compile_rules()
 {
-	cd $PACKAGE-$VERSION
 	./configure --shared --prefix=/usr \
 		--libdir=/usr/share/uclibc-cross-compiler-$TARGET/lib \
 		--includedir=/usr/share/uclibc-cross-compiler-$TARGET/include
@@ -27,5 +26,5 @@ compile_rules()
 genpkg_rules()
 {
 	mkdir -p $fs/usr/lib
-	cp -a $PACKAGE-$VERSION/libz.so* $fs/usr/lib
+	cp -a $src/libz.so* $fs/usr/lib
 }

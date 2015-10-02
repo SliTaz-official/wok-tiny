@@ -11,8 +11,7 @@ WEB_SITE="http://www.slitaz.org/"
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
-	mkdir $fs/var/www/same
+	mkdir -p $fs/var/www/same
 	cp -a $stuff/index.html $fs/var/www/same
 	chown -R 80.80 $fs/var/www/same
 }
-

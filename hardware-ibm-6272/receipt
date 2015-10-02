@@ -1,0 +1,64 @@
+# SliTaz package receipt.
+
+PACKAGE="hardware-ibm-6272"
+VERSION="1.0"
+CATEGORY="meta"
+MAINTAINER="devel@slitaz.org"
+LICENSE="BSD"
+SHORT_DESC="IBM 300GL 6272/6282 (P75-233 ISA/PCI/USB/ETH desktop) hardware support"
+WEB_SITE="http://www.slitaz.org/"
+
+DEPENDS="isapnptools module-cs89x0"
+SUGGESTED="module-usb-storage"
+
+# Post message when installing.
+post_install()
+{
+	[ -s $1/etc/init.d/pnp.sh ] || cat > $1/etc/init.d/pnp.sh <<EOT
+#!/bin/sh
+
+. /etc/init.d/rc.functions
+EOT
+	chmod +x $fs/etc/init.d/pnp.sh
+	cat >> $1/etc/init.d/pnp.sh <<EOT
+
+echo -n "Switching on isa pnp ethernet card "
+for io in \$(seq 360 -10 250); do for irq in IRQ_CS89X0_LIST; do
+pnpdump | awk "BEGIN {s=0} \\
+/CONFIGURE CSC6040/ {s=1} { \\
+  if (s==0) print; \\
+  else if (/INT 0/) print \\"(INT 0 (IRQ \$irq (MODE +E)))\\"; \\
+  else if (/IO 0/) print \\"(IO 0 (SIZE 16) (BASE 0x0\$io) (CHECK))\\"; \\
+  else if (/ACT Y/) { s=0; print \\"(ACT Y)\\"} \\
+  else print \\
+}" > /etc/isapnp.conf
+if isapnp /etc/isapnp.conf > /dev/null 2>&1 ; then
+  modprobe cs89x0 io=0x\$io irq=\$irq > /dev/null 2>&1
+  break 2
+fi
+done ; done
+status
+EOT
+	grep pnp.sh $1/etc/rcS.conf ||
+	sed -i 's/EARLY_RUN_SCRIPTS="/&pnp.sh /' $1/etc/rcS.conf
+	list=""
+	for i in $IRQ_CS89X0_LIST ; do
+		case " 15 12 11 10 9 7 6 5 4 3 " in
+		*\ $i\ *)	list="$list $i "
+		esac
+	done
+	sed -i "s/IRQ_CS89X0_LIST/${list:-15 12 11 10}/" $1/etc/init.d/pnp.sh
+	sed -i 's/cs89x0[^ "]* //' $1/etc/rcS.conf
+}
+
+config_form()
+{
+	cat <<EOT
+<table>
+<tr>
+<td>Allowed IRQ for the Ethernet driver cs89x0</td>
+<td><input type="text" name="IRQ_CS89X0_LIST" value="${IRQ_LIST:-15 12 11 10 9 7 6 5 4 3}" /></td>
+</tr>
+</table>
+EOT
+}

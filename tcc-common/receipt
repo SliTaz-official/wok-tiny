@@ -13,5 +13,5 @@ WANTED="tcc"
 genpkg_rules()
 {
 	mkdir -p $fs/usr/lib
-	cp -a $_pkg/usr/lib/tcc $fs/usr/lib
+	cp -a $install/usr/lib/tcc $fs/usr/lib
 }

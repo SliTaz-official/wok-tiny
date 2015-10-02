@@ -17,16 +17,15 @@ CONFIG_FILES="/etc/inetd.conf /etc/rcS.conf"
 # Rules to configure and make the package.
 compile_rules()
 {
-	cd $src
 	make CC=uclibc-$TARGET-cc CFLAGS=-DLOCKFILE_DIR=\\\"/var/lock\\\" &&
-	make DESTDIR=$PWD/_pkg install
+	make DESTDIR=$DESTDIR install
 }
 
 # Rules to gen a SliTaz package suitable for Tazpkg.   
 genpkg_rules()                                      
 {
 	mkdir -p $fs/usr $fs/etc/init.d $fs/dev
-	cp -a $_pkg/usr/sbin $fs/usr
+	cp -a $install/usr/sbin $fs/usr
 	ln -s daemon $fs/etc/init.d/p910nd
 }
 

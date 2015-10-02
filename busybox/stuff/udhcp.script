@@ -1,7 +1,5 @@
 #!/bin/sh
 
-# udhcpc script edited by Tim Riker <Tim@Rikers.org>
-
 [ -z "$1" ] && echo "Error: should be called from udhcpc" && exit 1
 
 [ "$subnet" == "255.255.255.255" ] && subnet="255.255.0.0" # qemu weirdness
@@ -14,14 +12,12 @@ case "$1" in
 		/sbin/ifconfig $interface 0.0.0.0
 		for i in /etc/ipdown.d/*; do
 			[ -x $i ] && $i $interface
-		done
-		;;
+		done ;;
 
 	renew|bound)
 		/sbin/ifconfig $interface $ip $BROADCAST $NETMASK
 
-		if [ -n "$router" ] ; then
-			echo "deleting routers"
+		if [ "$router" ] ; then
 			while route del default gw 0.0.0.0 dev $interface ; do
 				:
 			done
@@ -32,16 +28,14 @@ case "$1" in
 			done
 		fi
 
-		echo -n > $RESOLV_CONF
-		[ -n "$domain" ] && echo search $domain >> $RESOLV_CONF
+		rm -f $RESOLV_CONF
+		[ "$domain" ] && echo search $domain >> $RESOLV_CONF
 		for i in $dns ; do
-			echo adding dns $i
-			echo nameserver $i >> $RESOLV_CONF
-		done
+			echo nameserver $i
+		done >> $RESOLV_CONF
 		[ "$1" == "bound" ] && for i in /etc/ipup.d/*; do
 			[ -x $i ] && $i $interface $ip $dns
-		done
-		;;
+		done ;;
 esac
 
 exit 0

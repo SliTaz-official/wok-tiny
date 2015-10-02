@@ -1,22 +1,22 @@
 # SliTaz package receipt.
 
 PACKAGE="module-cs89x0"
-VERSION="2.6.37"
+VERSION="2.6.14"
 CATEGORY="base-system"
 SHORT_DESC="Kernel module for the cs89x0 driver"
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="GPL2"
 WEB_SITE="http://tiny.slitaz.org/"
-WANTED="kernel-modular"
+WANTED="linux"
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
 	local path
-	path=lib/modules/$VERSION-slitaz/kernel
+	export src=$WOK/$WANTED/source/linux-$VERSION
+	export _pkg=$WOK/$WANTED/install
+	path=lib/modules/$(ls $_pkg/lib/modules)/kernel
 	mkdir -p $fs/$path
-	export src=$WOK/$WANTED/linux-$VERSION
-	export _pkg=$src/_pkg
 	$src/slitaz/list_modules.sh drivers/net/${PACKAGE#*-}* | while read module; do
 		dir=$path/$(dirname $module)
 		[ -d $fs/$dir ] || mkdir -p $fs/$dir
@@ -27,5 +27,45 @@ genpkg_rules()
 # Post install/remove commands for Tazpkg.
 post_install()
 {
-	chroot "$1/" depmod -a $VERSION-slitaz
+	[ "$IRQCS89" ] && IRQCS89="|irq=${IRQCS89%%[, ]*}"
+	[ "$IOCS89" ] && IOCS89="|io=${IOCS89%%[, ]*}"
+	echo "${PACKAGE#*-}$IOCS89$IRQCS89|mode=${MODECS89:-rj45}|debug=${DEBUGCS89:-0}" >> $1/modules
+}
+
+config_form()
+{
+	cat <<EOT
+<h4>CS89x0 Ethernet driver</h4>
+<table>
+<tr>
+<td>I/O base</td>
+<td><input type="text" name="IOCS89"
+title="Likely 0x300 0x320 0x340 0x360 0x200 0x220 0x240 0x260 0x280 0x2a0 0x2c0 or 0x2e0" /></td>
+</tr>
+<tr>
+<td>IRQ</td>
+<td><input type="text" name="IRQCS89" title "Likely 10 11 12 or 5" /></td>
+</tr>
+<tr>
+<td>Media</td>
+<td><select name="MODECS89">
+	<option value="rj45">rj45</option>
+	<option value="bnc"$([ "$MODECS89" == "bnc" ] && echo ' selected="selected"')>bnc</option>
+	<option value="aui"$([ "$MODECS89" == "aui" ] && echo ' selected="selected"')>aui</option>
+</select></td>
+</tr>
+<tr>
+<td>Debug</td>
+<td><select name="DEBUGCS89">
+EOT
+	for i in $(seq 0 6); do
+	cat <<EOT
+	<option value="$i"$([ "$DEBUGCS89" == "$i" ] && echo ' selected="selected"')>$i</option>
+EOT
+	done
+	cat <<EOT
+</select></td>
+</tr>
+</table>
+EOT
 }

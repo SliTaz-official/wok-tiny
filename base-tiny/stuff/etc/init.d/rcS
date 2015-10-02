@@ -1,0 +1,249 @@
+#!/bin/sh
+# /etc/init.d/rcS - Initial boot script for SliTaz GNU/Linux.
+# Config file is : /etc/rcS.conf
+#
+# rcS is the main initialization script used to check fs, mount, clean,
+# run scripts and start daemons.
+#
+. /etc/init.d/rc.functions
+. /etc/rcS.conf
+
+# Set TZ and boot time.
+[ -s /etc/TZ ] && export TZ="$(cat /etc/TZ)"
+[ "$bootdate" ] || bootdate=$(date +%s)
+
+case "$1" in
+
+readonly)
+
+echo "Processing /etc/init.d/rcS..."
+
+# Mount /proc.
+echo -n "Mounting proc filesystem..."
+mount proc
+status
+
+if [ "$EARLY_RUN_SCRIPTS" ]; then
+	echo "Executing early initialization scripts..."
+	for script in $EARLY_RUN_SCRIPTS
+	do
+		[ -x /etc/init.d/$script ] && /etc/init.d/$script
+	done
+fi
+
+# Load all modules listed in config file.
+if [ "$LOAD_MODULES" ]; then
+	echo -n "Loading modules..."
+	for mod in $LOAD_MODULES
+	do
+		echo -n " ${mod%%|*}"
+		modprobe ${mod//|/ }
+	done
+	status
+	[ "$KEEP_MODULES" ] || rm -rf /lib/modules
+fi
+
+# Mount /sys.
+echo -n "Mounting sys filesystem..."
+mount sysfs
+status
+
+echo -n "Updating /dev..."
+for i in /sys/block/*/dev /sys/block/*/*/dev ; do
+	[ -s "$i" ] || continue
+	n=${i%/dev}
+	n=/dev/${n##*/}
+	[ -e $n ] && continue
+	echo -n " ${n##*/}"
+	mknod $n b $(sed 's/:/ /' < $i)
+done
+status
+
+# Before mounting filesystems we check fs specified in the file
+# /etc/rcS.conf and variable $CHECK_FS.
+if [ "$CHECK_FS" ]; then
+	mount -o remount,ro /
+	for i in $CHECK_FS
+	do
+		echo "Checking filesystem on : $i"
+		e2fsck -p $i
+	done
+fi
+
+# Remount rootfs rw.
+echo "Remounting rootfs read/write..."
+mount -o remount,rw /
+;;
+
+readwrite)
+
+# Mount filesystems in /etc/fstab.
+echo "Mounting filesystems in fstab..."
+mount -a
+;;
+
+logged)
+
+# Store boot messages to log files.
+dmesg > /var/log/dmesg.log &
+
+# Parse cmdline args for earlier boot options. All other boot options
+# are in /etc/init./bootopts.sh.
+echo -n "Searching for early boot options..."
+for opt in $(cat /proc/cmdline)
+do
+	case $opt in
+		cdrom=*)
+			export CDROM=${opt#cdrom=} ;;
+		modprobe=*)
+			export MODPROBE="yes" ;;
+		config=*)
+			export CONFIG=${opt#config=} ;;
+		*)
+			continue ;;
+	esac
+done
+status
+
+# Clean up the system.
+if [ "$CLEAN_UP_SYSTEM" = "yes" ]; then
+	echo -n "Cleaning up the system..."
+	find /var/run -name "*.pid" -type f | xargs rm -f
+	rm -rf /tmp /var/lock/*
+	mkdir -p /tmp && chmod 1777 /tmp
+	status
+else
+	echo "System clean up is disabled in /etc/rcS.conf..."
+	echo -n "Keeping all tmp and pid files..."
+	status
+fi
+
+# Create /dev/cdrom if needed (symlink does not exist on LiveCD).
+# Also add /dev/cdrom to fstab if entry does not exist.
+if [  "$CDROM" ]; then
+	DRIVE_NAME=${CDROM#/dev/}
+else
+	DRIVE_NAME=$(fgrep -s "drive name" /proc/sys/dev/cdrom/info | cut -f 3)
+fi
+if [ -n "$DRIVE_NAME" -a ! "$(readlink /dev/cdrom)" ]; then
+	echo -n "Creating symlink : /dev/cdrom..."
+	ln -s /dev/$DRIVE_NAME /dev/cdrom
+	ln -s /dev/$DRIVE_NAME /dev/dvd
+	chmod 0666 /dev/cdrom /dev/dvd /dev/$DRIVE_NAME
+	status
+fi
+if ! fgrep -q "/dev/cdrom" /etc/fstab; then
+	echo -n "Adding /dev/cdrom  to fstab..."
+	echo '/dev/cdrom      /media/cdrom iso9660 user,ro,noauto       0       0' \
+		>> /etc/fstab
+	status
+fi
+
+# Handle kernel cmdline parameter modprobe=<module_list>
+if [ "$MODPROBE" ]; then
+	MODULES=$(sed -e 's/.* modprobe=\([^ ]*\).*/\1/' -e 's/,/\n/g' < /proc/cmdline)
+	for i in $MODULES; do
+		echo -n "Loading kernel module $i"
+		modprobe $i
+		status
+	done
+fi
+
+# Handle kernel cmdline parameter config=<device>,<path> to source a
+# disk init script
+if [ "$CONFIG" ]; then
+	DEVICE=${CONFIG%,*}
+	SCRIPT=${CONFIG#*,}
+	echo "Probing $DEVICE... "
+	if ! mount -r $DEVICE /mnt; then
+		if echo $DEVICE | grep -Eq "/dev/sd|UUID=|LABEL="; then
+			USBDELAY=$(cat /sys/module/usb_storage/parameters/delay_use)
+			USBDELAY=$((1+$USBDELAY))
+			echo "$DEVICE is potentially a USB device: sleep for $USBDELAY seconds"
+			sleep $USBDELAY
+		fi
+		if ! mount -r $DEVICE /mnt; then
+			CONFIG=""
+		fi
+	fi
+	echo -n "Source $SCRIPT from $DEVICE..."
+	if [ "$CONFIG" ]; then
+		. /mnt/$SCRIPT
+		umount /mnt 2> /dev/null || true
+	fi
+	status
+fi
+
+# Mount /proc/bus/usb.
+if [ -d /proc/bus/usb ]; then
+	echo -n "Mounting /proc/bus/usb filesystem..."
+	mount -t usbfs usbfs /proc/bus/usb
+	status
+fi
+
+# Start syslogd and klogd.
+if [ "$KERNEL_LOG_DAEMONS" = "yes" ]; then
+	echo -n "Starting system log deamon: syslogd..."
+	syslogd -s $SYSLOGD_ROTATED_SIZE && status
+	echo -n "Starting kernel log daemon: klogd..."
+	klogd && status
+else
+	echo "Kernel log daemons are disabled in /etc/rc.conf..."
+fi
+
+[ -d /usr/share/kmap ] &&
+echo "Load keymap $(basename /usr/share/kmap/* .kmap)" &&
+cat /usr/share/kmap/* | loadkmap &&
+rm -rf /usr/share/kmap
+
+# Start all scripts specified with $RUN_SCRIPTS.
+echo "Executing all initialization scripts..."
+for script in $RUN_SCRIPTS
+do
+	[ -x /etc/init.d/$script ] && /etc/init.d/$script
+done
+
+# Re-source main config file. In Live mode, daemons list can be modified
+# by boot options (screen=text will remove slim).
+. /etc/rcS.conf
+
+# Start all daemons specified with $RUN_DAEMONS.
+echo "Starting all daemons specified in /etc/rcS.conf..."
+for daemon in $RUN_DAEMONS
+do
+	if [ -x /etc/init.d/$daemon ]; then
+		/etc/init.d/$daemon start
+	fi
+done
+
+# Reset screen and display a bold message.
+if [  "$MESSAGE" ]; then
+	reset
+	echo -e "\033[1m$MESSAGE\033[0m"
+fi
+
+# Display and log boot time.
+time=$(($(date +%s) - $bootdate))
+echo $time > /var/log/boot-time
+echo "SliTaz boot time: ${time}s"
+;;
+
+*)
+if [ ! -s /dev/shm/boot.log ]; then
+	mount -t devpts devpts /dev/pts
+	mount -t tmpfs tmpfs /dev/shm
+fi
+script -aqc '/etc/init.d/rcS readonly' /dev/shm/boot.log
+mv -f /dev/shm/boot.log /boot.log
+umount /dev/shm
+script -aqc '/etc/init.d/rcS readwrite' /boot.log
+last=.9
+for i in .8 .7 .6 .5 .4 .3 .2 .1 .0 '' ; do
+	mv -f /var/log/boot.log$i /var/log/boot.log$last 2>/dev/null
+	last=$i
+done
+mv -f /boot.log /var/log/boot.log
+script -aqc '/etc/init.d/rcS logged' /var/log/boot.log
+;;
+
+esac

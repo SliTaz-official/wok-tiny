@@ -1,7 +1,7 @@
 # SliTaz package receipt.
 
 PACKAGE="ppp-plugins-atm"
-VERSION="2.4.5"
+VERSION="2.4.7"
 CATEGORY="network"
 SHORT_DESC="ppp extras ADSL using pppoatm"
 MAINTAINER="pascal.bellard@slitaz.org"
@@ -15,7 +15,7 @@ CONFIG_FILES="/etc/ppp/"
 genpkg_rules()
 {
 	mkdir -p $fs/usr/lib/pppd/$VERSION
-	cp -a $_pkg/usr/lib/pppd/$VERSION/pppoatm.so $fs/usr/lib/pppd/$VERSION
+	cp -a $install/usr/lib/pppd/$VERSION/pppoatm.so $fs/usr/lib/pppd/$VERSION
 }
 
 config_form()

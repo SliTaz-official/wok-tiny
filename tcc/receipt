@@ -17,22 +17,24 @@ TAGS="compiler C"
 # Rules to configure and make the package.
 compile_rules()
 {
-	cd $src
 	if [ ! -f done.Makefile.u ]; then
-		patch < ../stuff/Makefile.u || return 1
+		patch < $stuff/Makefile.u || return 1
 		touch done.Makefile.u
 	fi
 	sed -i 's/cp -u/cp/' tests/Makefile
 	./configure --prefix=/usr --enable-cross \
 		--cross-prefix=uclibc-$TARGET- &&
-	make && make DESTDIR=$PWD/_pkg install
+	make && make DESTDIR=$DESTDIR install
+	[ -s $DESTDIR/usr/bin/i386-tcc -a ! -s $DESTDIR/usr/bin/x86_64-tcc ] &&
+	mv $DESTDIR/usr/bin/tcc $DESTDIR/usr/bin/x86_64-tcc &&
+	mv $DESTDIR/usr/bin/i386-tcc $DESTDIR/usr/bin/tcc
 }
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
 	mkdir -p $fs/usr/bin
-	cp -a $_pkg/usr/bin/tcc $fs/usr/bin
+	cp -a $install/usr/bin/tcc $fs/usr/bin
 	ln -s tcc $fs/usr/bin/cc
 }
 

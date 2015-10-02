@@ -14,8 +14,8 @@ DEPENDS="tcc-common libdl libm libgcc_s"
 genpkg_rules()
 {
 	mkdir -p $fs/usr/bin
-	cp -a $_pkg/usr/bin/arm-tcc-vfp $fs/usr/bin
-	cp -a $_pkg/usr/bin/arm-tcc-fpa-ld $fs/usr/bin
-	cp -a $_pkg/usr/bin/arm-tcc-vfp-eabi $fs/usr/bin
-	cp -a $_pkg/usr/bin/arm-tcc-fpa $fs/usr/bin
+	cp -a $install/usr/bin/arm-tcc-vfp $fs/usr/bin
+	cp -a $install/usr/bin/arm-tcc-fpa-ld $fs/usr/bin
+	cp -a $install/usr/bin/arm-tcc-vfp-eabi $fs/usr/bin
+	cp -a $install/usr/bin/arm-tcc-fpa $fs/usr/bin
 }

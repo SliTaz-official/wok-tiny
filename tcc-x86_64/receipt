@@ -14,5 +14,5 @@ DEPENDS="tcc-common libdl libm libgcc_s"
 genpkg_rules()
 {
 	mkdir -p $fs/usr/bin
-	cp -a $_pkg/usr/bin/x86_64-tcc $fs/usr/bin
+	cp -a $install/usr/bin/x86_64-tcc $fs/usr/bin
 }
