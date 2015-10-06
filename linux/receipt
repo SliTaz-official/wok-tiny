@@ -36,6 +36,8 @@ compile_rules()
 	cp $WOK/busybox/source/busybox*/.config $src/config-busybox
 	mkdir $src/slitaz
 	cp $stuff/list_modules.sh $src/slitaz
+	cc -o bootloader.o -Wa,-algms=bootloader.lst -c $stuff/bootloader.S
+	objcopy -O binary bootloader.o bootloader.bin
 
 	sed -i 's/^config %config/config/' Makefile
 	cp $stuff/linux-$VERSION-slitaz.config .config
@@ -51,9 +53,11 @@ genpkg_rules()
 {
 	mkdir $fs/boot
 	cp -a $src/arch/i386/boot/bzImage $fs/boot/
+	dd if=$src/bootloader.bin of=$fs/boot/bzImage conv=notrunc
 	cp -a $src/System.map $fs/boot/
 	cp -a $src/.config $fs/boot/config
 	cp -a $src/config-busybox $fs/boot
+	cp -a $stuff/bundle $fs/boot
 }
 
 # Pre and post install commands for Tazpkg.
