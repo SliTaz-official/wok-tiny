@@ -23,11 +23,12 @@ ASK_VGA		= -3
 #define EXE_CMDLINE		kernel >= 2.4
 // #define FLOPPY_CMDLINE	kernel >= 2.4
 // #define OLDCMDLINE		kernel  < 2.4
+#define DISPLAY_VERSION		display version string
 #define MORETHAN16M		up to 4Gb RAM, not 16Mb
 #define KEYBOARDLESS_SUPPORT	scan floppy swap each 5 seconds
 // #define FAT12_SUPPORT	will format the floppy free space in FAT 12
-// #define REALMODE_NOT_CHECKED	exe crash when started in vm86
-// #define SINGLE_FLOPPY	Everytihng fit in a single floppy
+// #define CHECK_REALMODE	exe dont crash when started in vm86
+// #define SINGLE_FLOPPY	Everything fit in a single floppy
 // #define EDIT_CMDLINE
 // #define MOVE_CMDLINE
 #define INITRD_SUPPORT
@@ -213,7 +214,9 @@ loadflags	=	0x11
 heap_end_ptr	=	0x24
 	orw	$0x8020, type_of_loader(%si) # loader type = 0x20 = bootsect-loader
 	movb	$(stacktop-0x300)/256, heap_end_ptr+1(%si)
+#ifdef DISPLAY_VERSION
 	call	puts_version		# show which kernel we are loading
+#endif
 
 #ifdef	FLOPPY_CMDLINE
 # The cmdline can be entered and modifed at boot time.
@@ -663,18 +666,22 @@ comstart:
 	  movsb
 nocmdline:
 	xchgw	%ax, %di
-# ifdef HELP
+# if defined(HELP) && defined(DISPLAY_VERSION)
 	cmpb	$'?', -1(%si)
 	movw	$EXEADRS(0x200), %si
 	je	puts_version
-#  ifndef REALMODE_NOT_CHECKED
-	smsww	%ax
-	andb	$1, %al
-	jne	puts_version			// real mode only...
-#  endif
 # endif
 #else
 	xchgw	%ax, %di
+#endif
+#ifdef CHECK_REALMODE
+	smsww	%ax
+	andb	$1, %al
+# if defined(HELP) && defined(DISPLAY_VERSION)
+	jne	puts_version			// real mode only...
+# else
+	jne	dosexit				// real mode only...
+# endif
 #endif
 	movw	0x2C(%bx), %ds	// DOS 3.0+
 loop1:
@@ -682,7 +689,7 @@ loop1:
 	cmpw	%cx, (%bx)
 	jne	loop1
 	leaw	4(%bx), %dx 	// %ds:%dx filename
-#if !defined(REALMODE_NOT_CHECKED) && defined(EXE_CMDLINE) && defined(HELP)
+#if defined(CHECK_REALMODE)
 	movb	$0x3D, %ah	// open, access = RO
 #else
 	movw	$0x3D00, %ax	// open, access = RO
@@ -711,8 +718,10 @@ oldcmdline:
 	lretw
 #endif
 #define kernel_version_offset	0xE
+#ifdef DISPLAY_VERSION
 puts_version:
 	addw	kernel_version_offset(%si),%si	# starting protocol 2.00, Kernel 1.3.73
+#endif
 puts:
 	movb	$0xd, %al		# CR
 putcs:

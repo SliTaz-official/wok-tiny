@@ -9,13 +9,13 @@ RESOLV_CONF="/etc/resolv.conf"
 
 case "$1" in
 	deconfig)
-		/sbin/ifconfig $interface 0.0.0.0
+		ifconfig $interface 0.0.0.0
 		for i in /etc/ipdown.d/*; do
 			[ -x $i ] && $i $interface
 		done ;;
 
 	renew|bound)
-		/sbin/ifconfig $interface $ip $BROADCAST $NETMASK
+		ifconfig $interface $ip $BROADCAST $NETMASK
 
 		if [ "$router" ] ; then
 			while route del default gw 0.0.0.0 dev $interface ; do

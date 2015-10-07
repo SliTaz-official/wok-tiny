@@ -22,7 +22,7 @@ EOT
 	chmod +x $fs/etc/init.d/pnp.sh
 	cat >> $1/etc/init.d/pnp.sh <<EOT
 
-echo -n "Switching on isa pnp ethernet card "
+echo -n "Switching on cs89x0 isa pnp ethernet card "
 for io in \$(seq 360 -10 250); do for irq in IRQ_CS89X0_LIST; do
 pnpdump | awk "BEGIN {s=0} \\
 /CONFIGURE CSC6040/ {s=1} { \\
@@ -49,6 +49,9 @@ EOT
 	done
 	sed -i "s/IRQ_CS89X0_LIST/${list:-15 12 11 10}/" $1/etc/init.d/pnp.sh
 	sed -i 's/cs89x0[^ "]* //' $1/etc/rcS.conf
+	sed -i '/rm -f .sbin.*pnp/d' $1/etc/init.d/pnp.sh
+	[ "$CS89X0_WIPEPNP" == "on" ] &&
+	echo 'rm -f /sbin/pnpdump /sbin/isapnp' >> $1/etc/init.d/pnp.sh
 }
 
 config_form()
@@ -60,5 +63,6 @@ config_form()
 <td><input type="text" name="IRQ_CS89X0_LIST" value="${IRQ_LIST:-15 12 11 10 9 7 6 5 4 3}" /></td>
 </tr>
 </table>
+<input type="checkbox" name="CS89X0_WIPEPNP" />Remove PNP binaries after use<br>
 EOT
 }

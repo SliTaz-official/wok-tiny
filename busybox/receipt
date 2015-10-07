@@ -120,6 +120,10 @@ genpkg_rules()
 
     ( cd rootfs ; find | cpio -o -H newc ) > rootfs.cpio
     du -h rootfs.cpio
+
+	rm -rf $fs/*
+	cp rootfs.cpio $fs
+	cp $stuff/busybox*config $fs/busybox.config.txt
 }
 
 # Force glibc-2.7 reinstall if 2.3.6 still in use.

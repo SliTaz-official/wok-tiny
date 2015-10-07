@@ -8,13 +8,15 @@ MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="BSD"
 WEB_SITE="http://tiny.slitaz.org/"
 AUTO_SELECTION="always"
-CONFIG_FILES="/etc/network.conf /etc/rcS.conf /etc/passwd /etc/shadow \
-/root/.profile /etc/fstab /etc/init.d/local.sh"
+CONFIG_FILES="/etc/network.conf /etc/rcS.conf /etc/passwd /etc/fstab \
+/root/.profile /etc/init.d/local.sh"
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
-	cp -a $stuff/. $fs
+	for i in $CONFIG_FILES ; do
+		[ -e $stuff$i ] && echo ${i#/}
+	done | ( cd $stuff ; cpio -o -H newc ) | ( cd $fs ; cpio -id )
 }
 
 config_form()
@@ -79,6 +81,8 @@ $RC_LOCAL
 </textarea></td>
 </tr>
 </table>
+<input type="checkbox" name="KEEP_MODULES" />
+Do not remove the modules files after loading modules.
 EOT
 }
 
@@ -93,23 +97,26 @@ post_install()
 	DHCP)	DHCP="yes"
 		STATIC="no"
 	esac
-	sed -i -e "s/^DNS_SERVER=.*/DNS_SERVER=\"$DNS_SERVER\"/" \
-	       -e "s/^INTERFACE=.*/INTERFACE=\"$INTERFACE\"/" \
-	       -e "s/^NETMASK=.*/NETMASK=\"$NETMASK\"/" \
-	       -e "s/^GATEWAY=.*/GATEWAY=\"$GATEWAY\"/" \
-	       -e "s/^STATIC=.*/STATIC=\"$STATIC\"/" \
-	       -e "s/^DHCP=.*/DHCP=\"$DHCP\"/" \
-	       -e "s/^IP=.*/IP=\"$IP\"/" $1/etc/network.conf
+	sed -i	"s/^KEEP_MODULES=.*/KEEP_MODULES=\"$KEEP_MODULES\"/" \
+			$1/etc/rcS.conf
+	sed -i	-e "s/^DNS_SERVER=.*/DNS_SERVER=\"$DNS_SERVER\"/" \
+		-e "s/^INTERFACE=.*/INTERFACE=\"$INTERFACE\"/" \
+		-e "s/^NETMASK=.*/NETMASK=\"$NETMASK\"/" \
+		-e "s/^GATEWAY=.*/GATEWAY=\"$GATEWAY\"/" \
+		-e "s/^STATIC=.*/STATIC=\"$STATIC\"/" \
+		-e "s/^DHCP=.*/DHCP=\"$DHCP\"/" \
+		-e "s/^IP=.*/IP=\"$IP\"/" $1/etc/network.conf
 	if [ -n "$PASSWORD" ]; then
 		case "$PASSWORD" in
 		\$1\$*)
 			sed -i "s|^root:[^:]*|root:$PASSWORD|" $1/etc/shadow ;;
 		*)
-			mkdir $1/lib
-			cp -a /lib/lib[cm][.-]* /lib/ld* $1/lib
-			cp -a /bin/busybox $1/lib/chpasswd
-			echo "root:$PASSWORD" | chroot $1/ /lib/chpasswd -m
-			rm -rf $1/lib
+			mkdir $1/fs
+			( cd $1/fs ; cpio -idmu ) < dist/rootfs.cpio
+			cp $1/etc/passwd $1/fs/etc/
+			echo "root:$PASSWORD" | chroot $1/fs/ busybox chpasswd -m
+			cp $1/fs/etc/passwd $1/etc/
+			rm -rf $1/fs
 		esac
 	else
 		sed -i 's/^root:[^:]*:/root::/' $1/etc/passwd
