@@ -19,7 +19,7 @@ post_install()
 
 . /etc/init.d/rc.functions
 EOT
-	chmod +x $fs/etc/init.d/pnp.sh
+	chmod +x $1/etc/init.d/pnp.sh
 	cat >> $1/etc/init.d/pnp.sh <<EOT
 
 echo -n "Switching on cs89x0 isa pnp ethernet card "
@@ -51,7 +51,7 @@ EOT
 	sed -i 's/cs89x0[^ "]* //' $1/etc/rcS.conf
 	sed -i '/rm -f .sbin.*pnp/d' $1/etc/init.d/pnp.sh
 	[ "$CS89X0_WIPEPNP" == "on" ] &&
-	echo 'rm -f /sbin/pnpdump /sbin/isapnp' >> $1/etc/init.d/pnp.sh
+	echo 'rm -f /sbin/pnpdump /sbin/isapnp /etc/isapnp.conf' >> $1/etc/init.d/pnp.sh
 }
 
 config_form()

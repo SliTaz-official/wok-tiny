@@ -9,7 +9,7 @@ LICENSE="BSD"
 WEB_SITE="http://tiny.slitaz.org/"
 AUTO_SELECTION="always"
 CONFIG_FILES="/etc/network.conf /etc/rcS.conf /etc/passwd /etc/fstab \
-/root/.profile /etc/init.d/local.sh"
+/etc/inetd.conf /etc/daemons.conf /root/.profile /etc/init.d/local.sh"
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()

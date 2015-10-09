@@ -29,7 +29,7 @@ post_install()
 	grep -q inetd $1/etc/rcS.conf ||
 	sed -i 's/^RUN_DAEMONS="/&inetd /' $1/etc/rcS.conf
 	cat >> $1/etc/inetd.conf <<EOT
-printer	stream	tcp	nowait	root	/usr/sbin/lpd /usr/sbin/lpd /var/spool
+printer	stream	tcp	nowait	root	lpd lpd /var/spool
 EOT
 	n=0
 	for i in $(echo $LP_NAMES | sed 's/,/ /g') ; do

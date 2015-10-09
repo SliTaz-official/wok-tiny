@@ -9,7 +9,7 @@
 
 NAME=$(basename $0)
 DESC="$NAME deamon"
-DAEMON=$(which $NAME)
+DAEMON=$(which $NAME || echo $NAME)
 eval $(grep -i ^${NAME}_OPTIONS /etc/daemons.conf | sed 's/.*_OPT/OPT/')
 PIDFILE=/var/run/$NAME.pid
 
@@ -39,6 +39,7 @@ fi
 
 case "$1" in
   start)
+    [ $DAEMON != inetd ] &&
     grep -qs $DAEMON /etc/inetd.conf && active_inetd
     if active_pidfile $PIDFILE $NAME ; then
       echo "$NAME is already running."
@@ -51,6 +52,7 @@ case "$1" in
     status
     ;;
   stop)
+    [ $DAEMON != inetd ] &&
     grep -qs $DAEMON /etc/inetd.conf && inactive_inetd
     if ! active_pidfile $PIDFILE $NAME ; then
       echo "$NAME is not running."
@@ -61,6 +63,7 @@ case "$1" in
     status
     ;;
   restart)
+    [ $DAEMON != inetd ] &&
     grep -qs $DAEMON /etc/inetd.conf && exit 0
     if ! active_pidfile $PIDFILE $NAME ; then
       echo "$NAME is not running."

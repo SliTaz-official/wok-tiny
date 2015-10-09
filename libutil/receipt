@@ -11,9 +11,16 @@ DEPENDS="base-tiny"
 BUILD_DEPENDS="uclibc-cross-compiler-$TARGET"
 WEB_SITE="http://tiny.slitaz.org/"
 
+# Rules to configure and make the package.
+compile_rules()
+{
+	mkdir -p $DESTDIR/lib
+	cp -a /usr/share/uclibc-cross-compiler-$TARGET/lib/$PACKAGE*.so* $DESTDIR/lib
+}
+
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
-    mkdir -p $fs/lib
-    cp -a /usr/share/uclibc-cross-compiler-$TARGET/lib/$PACKAGE*.so* $fs/lib
+	cp -a $install/lib $fs/
+	chown 0.0 $fs/lib/*
 }

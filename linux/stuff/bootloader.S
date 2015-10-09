@@ -17,9 +17,13 @@ ASK_VGA		= -3
 #endif
 
 /* Assume protocol 2.00+ (kernel >= 1.3.73) */
-/* feature set */
+
+/* basic support: zImage or bzImage, floppy parameters table patch, */
+/* any sectors/track count (720K, 1.2M, 1.44M floppy or 1.68M ...), */
+/* show progress (.), show errors (-) */
+
+/* extra feature set */
 #define EXE_SUPPORT		real mode dos .exe file support
-// #define EXE_ONLY		remove floppy code
 #define EXE_CMDLINE		kernel >= 2.4
 // #define FLOPPY_CMDLINE	kernel >= 2.4
 // #define OLDCMDLINE		kernel  < 2.4
@@ -28,8 +32,8 @@ ASK_VGA		= -3
 #define KEYBOARDLESS_SUPPORT	scan floppy swap each 5 seconds
 // #define FAT12_SUPPORT	will format the floppy free space in FAT 12
 // #define CHECK_REALMODE	exe dont crash when started in vm86
-// #define SINGLE_FLOPPY	Everything fit in a single floppy
-// #define EDIT_CMDLINE
+#define MULTI_FLOPPY		Everything may dont fit in a single floppy
+// #define EDIT_CMDLINE		Wait 5 seconds for the first key to edit it
 // #define MOVE_CMDLINE
 #define INITRD_SUPPORT
 // #define INITRD_AUTOADDR	Hole in 16Mb..32Mb
@@ -38,8 +42,20 @@ ASK_VGA		= -3
 // #define COUNTER		Show floppy number
 #define LABEL "SliTaz"
 
+/* remove from basic features */
+// #define EXE_ONLY		remove floppy code
+// #define NO_FLOPPY_TABLE_PATCH	remove floppy parameter table patch
+// #define NO_OUTPUT		remove output code
+
 	.code16
 	.org	0
+
+#ifdef NO_OUTPUT
+# undef DISPLAY_VERSION
+# undef README_SUPPORT
+# undef FLOPPY_CMDLINE
+# undef COUNTER
+#endif
 
 bootsect_start:
 
@@ -57,7 +73,11 @@ boot_flag	=	bootsect_start+boot_flag_ofs
 
 
 stacktop	= 0x9E00		# in 0x8000 .. 0xA000
+#ifdef NO_FLOPPY_TABLE_PATCH
+zeroed		= 48+8			# gdt + zeroed registers
+#else
 zeroed		= 48+10			# gdt + zeroed registers
+#endif
 .macro	INIT_REGS
 	movw	$stacktop-zeroed, %di	# stacktop is an arbitrary value >=
 					# length of bootsect + length of
@@ -69,7 +89,7 @@ zeroed		= 48+10			# gdt + zeroed registers
 	pushw	%ss
 	popw	%es			# %es = %ss = INITSEG
 	xorw	%ax, %ax		# %ax = 0
-#if defined(EXE_CMDLINE)
+#ifdef EXE_CMDLINE
 	movw	$zeroed+1, %cx		# clear gdt + offset, %ds, limits, cmdline=""
 	rep				# don't worry about cld
 	stosb				# already done above
@@ -115,7 +135,7 @@ zeroed		= 48+10			# gdt + zeroed registers
 	.word	0			// Checksum
 	.word	EXEADRS(comstart)	// Initial IP value
 	.word	0xFFF0			// Initial (relative) CS value
-#if defined(EXE_ONLY) || defined(SINGLE_FLOPPY) || defined(COUNTER)
+#if defined(EXE_ONLY) || !defined(MULTI_FLOPPY) || defined(COUNTER)
 //	.word	0x001C			// File address of relocation table
 //	.word	0,0,0			// Overlay number
 	.ascii	"(SliTaz)"
@@ -144,7 +164,7 @@ LOADSZ		= 0x10000
 
 #if defined(EXE_SUPPORT) || defined(EXE_ONLY)
 A20BUFFER	= 0x68000		# a20 gate / himem.sys support
-#define USEA20BUFFER
+#define USEA20BUFFER			# Does not break zImage support
 #endif
  
 #ifndef EXE_ONLY
@@ -173,15 +193,26 @@ A20BUFFER	= 0x68000		# a20 gate / himem.sys support
 # High doesn't hurt.  Low does.  Let's use the max: 63
 
 	cli
+#ifdef NO_FLOPPY_TABLE_PATCH
+	xchg	%ax, %di		# sector count
+	popw	%ax			# limits = 0
+	incw	%cx			# cylinder 0, sector 1, clear Z
+	call	read_first_sectors	# read setup
+# ifdef	FLOPPY_CMDLINE
+	movw	$0, %si			# patched by installer (7C22)
+skipcmdline:
+#define cmd_line_ptr	0x22
+# endif
+#else
 	ldsw	0x78(%bx), %si		# %ds:%bx+0x78 is parameter table address
 	popw	%di
 	pushw	%es
 	pushw	%di
-#ifdef	FLOPPY_CMDLINE
+# ifdef	FLOPPY_CMDLINE
 	movw	$0, %bp			# patched by installer (7C22)
 skipcmdline:
 #define cmd_line_ptr	0x22
-#endif
+# endif
 	movb	$6, %cl			# copy 12 bytes
 	rep				# don't worry about cld
 	  movsw				# already done above
@@ -194,6 +225,7 @@ skipcmdline:
 	popw	%ax			# limits = 0
 	incw	%cx			# cylinder 0, sector 1, clear Z
 	call	read_first_sectors	# read setup
+#endif
 #ifdef	README_SUPPORT
 	xorw	%si, %si
 	orw	readme, %si
@@ -275,7 +307,6 @@ nocmdline:
 # possible, loading whole tracks whenever we can.
 
 .macro	autoaddr base
-#ifdef INITRD_AUTOADDR
 	movb	$0x88, %ah
 	int	$0x15
 	//jc	NeedMoreRAM			# error code 80 or 86
@@ -284,7 +315,6 @@ nocmdline:
 	movb	%ch, bootsect_dst_base_hi(%si)	# initramfs @ 32M
 	movb	%ch, ramdisk_image_ofs+3-\base
 NeedMoreRAM:
-#endif
 .endm
 
 bootsect_src_limit	= 16
@@ -400,7 +430,9 @@ initrdlp2:
 	je	nextInitrd	
 	orw	%bx, %bx
 	je	bootit			# no initrd
+# ifdef INITRD_AUTOADDR
 	autoaddr	cur_initrd_size_ofs(%di)
+# endif
 	movw	ramdisk_image+1,%ax
 	jmp	initrdlp
 nextInitrd:
@@ -416,7 +448,9 @@ nextInitrd:
 #ifdef MORETHAN16M
 	cmpb	%cl, ramdisk_image+2-ramdisk_size(%bx)
 	jb	bootit
+# ifdef INITRD_AUTOADDR
 	autoaddr	ramdisk_size_ofs(%bx)
+# endif
 	movw	ramdisk_image+1,%ax
 	shrw	%cl, boot_flag-ramdisk_size(%bx)
 	jne	initrdlp
@@ -477,8 +511,8 @@ kill_motor:
 #define FLOPPY_CYLINDERS	80	
 #define FLOPPY_HEADS		2	
 
+#if defined(MULTI_FLOPPY) && defined(COUNTER)
 .macro	putsmsg
-#if !defined(SINGLE_FLOPPY) && defined(COUNTER)
 	movw	$msgdigit+1-msg, %bx
 nextdigit:
 	andb	$0xF0, (%bx,%si)
@@ -486,9 +520,13 @@ nextdigit:
 	incb	(%bx,%si)
 	cmpb	$'9', (%bx,%si)
 	ja	nextdigit
-#endif
 	call	puts
 .endm
+#else
+.macro	putsmsg
+	call	puts
+.endm
+#endif
 
 check_limits:
 	popw	%dx
@@ -496,8 +534,10 @@ check_limits:
         ja	next_head		#   no -> store it
 	pushaw
         int     $0x13			# reset controler
+#ifndef NO_OUTPUT
 	stc
 	call	putcdot			# print '-'
+#endif
 read_sectorslp:
 	popaw
 bdendlp:
@@ -540,7 +580,7 @@ inc_head:
         jne	bdendlp			# reach head limit ?
         incb    %ch			# next cylinder
 read_first_sectors:
-#ifdef SINGLE_FLOPPY
+#ifndef MULTI_FLOPPY
 	jmp	bdendlp
 #else
         cmpb    $FLOPPY_CYLINDERS,%ch	# reach cylinder limit ?
@@ -552,7 +592,9 @@ next_floppy:
 dpy_swap_floppy:
 #ifdef KEYBOARDLESS_SUPPORT
 	pushw	%bx
+# ifndef NO_OUTPUT
 	putsmsg
+# endif
 	popw	%bx
 	movw	%si, %bp
 waitfloppy:
@@ -579,7 +621,9 @@ gobootit:
 	jne	waitfloppy
 waitfloppydone:
 #else
+# ifndef NO_OUTPUT
 	putsmsg
+# endif
 	cbw				# %ah = 0, get keyboard character
 	int	$0x16
 #endif
@@ -610,6 +654,7 @@ read_sectors_dosz:
 #endif
 
 putcdot:
+#ifndef NO_OUTPUT
 	movb	$'.'+3, %al	// . = success, - = failure
 putclf:
 	sbbb	$3, %al
@@ -619,6 +664,8 @@ putc:
  	int	$0x10
 	cmp	$0xd, %al		# CR ?
 	je	putclf
+#endif
+dosexit:
 	ret
 
 #ifdef KEYBOARDLESS_SUPPORT
@@ -655,12 +702,10 @@ comstart:
 	movw	$0x80, %si
 	movb	(%si), %cl
 	incw	%si
-# ifdef OLDCMDLINE
-#  ifdef FLOPPY_CMDLINE
+# if defined(OLDCMDLINE) && defined(FLOPPY_CMDLINE)
 	jcxz	nocmdline
 	movw	%di, EXEADRS(0x22)
 	movw	$0xA33F, 0x7F(%si)
-#  endif
 # endif
 	rep
 	  movsb
@@ -682,6 +727,9 @@ nocmdline:
 # else
 	jne	dosexit				// real mode only...
 # endif
+	movb	$0x3D, %ah	// open, access = RO
+#else
+	movw	$0x3D00, %ax	// open, access = RO
 #endif
 	movw	0x2C(%bx), %ds	// DOS 3.0+
 loop1:
@@ -689,11 +737,6 @@ loop1:
 	cmpw	%cx, (%bx)
 	jne	loop1
 	leaw	4(%bx), %dx 	// %ds:%dx filename
-#if defined(CHECK_REALMODE)
-	movb	$0x3D, %ah	// open, access = RO
-#else
-	movw	$0x3D00, %ax	// open, access = RO
-#endif
 	int	$0x21
 	jc	dosexit
 	xchgw	%ax, %bp	// fd
@@ -714,7 +757,7 @@ oldcmdline:
 #endif
 //	ljmp	$INITSEG, $loadsys
 	pushw	%ds
-	.byte	0x6A, loadsys-bootsect_start
+	.byte	0x6A, loadsys-bootsect_start	# pushw	$loadsys-bootsect_start
 	lretw
 #endif
 #define kernel_version_offset	0xE
@@ -722,6 +765,8 @@ oldcmdline:
 puts_version:
 	addw	kernel_version_offset(%si),%si	# starting protocol 2.00, Kernel 1.3.73
 #endif
+#if defined(DISPLAY_VERSION) || defined(README_SUPPORT) || defined(FLOPPY_CMDLINE) || defined(MULTI_FLOPPY)
+# ifndef NO_OUTPUT
 puts:
 	movb	$0xd, %al		# CR
 putcs:
@@ -729,10 +774,11 @@ putcs:
 	lodsb
 	cmpb	$0, %al			# end of string is any byte <= 0
 	jg	putcs
-dosexit:
 	ret	
+# endif
+#endif
 
-#if !defined(FLOPPY_ONLY) && !defined(EXE_ONLY)
+#if defined(MULTI_FLOPPY) && !defined(EXE_ONLY)
 initregs:
 	popw	%si
 	INIT_REGS
@@ -741,7 +787,7 @@ initregs:
 #endif
 
 
-#if !defined(SINGLE_FLOPPY) && !defined(EXE_SUPPORT)
+#if defined(MULTI_FLOPPY) && !defined(EXE_SUPPORT)
 #ifdef MULTI_INITRD
 swap_floppy2:
 	.ascii	"B or "
