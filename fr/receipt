@@ -12,7 +12,8 @@ DEPENDS="base-tiny"
 # Rules to configure and make the package.
 compile_rules()
 {
-	mkdir -p $DESTDIR/etc
+	mkdir -p $DESTDIR/etc $stuff
+	cd $stuff
 	echo "Europe/Paris" > $DESTDIR/etc/TZ
 	cat > $DESTDIR/etc/locale.conf <<EOT
 LANG=fr_FR
@@ -28,10 +29,12 @@ EOT
 	done << EOT
 kbd-busybox	/usr/share/kmap/fr-latin1.kmap
 EOT
+	cd ..
+	rm -rf $stuff
 }
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
-	cp -a $install/. $fs
+	cp -a $install/. $fs/
 }

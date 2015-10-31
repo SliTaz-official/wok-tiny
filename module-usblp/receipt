@@ -1,0 +1,31 @@
+# SliTaz package receipt.
+
+PACKAGE="module-usblp"
+VERSION="2.6.14"
+CATEGORY="base-system"
+SHORT_DESC="Kernel module for the USB printers"
+MAINTAINER="pascal.bellard@slitaz.org"
+LICENSE="GPL2"
+WEB_SITE="http://tiny.slitaz.org/"
+WANTED="linux"
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	local path
+	export src=$WOK/$WANTED/source/linux-$VERSION
+	export _pkg=$WOK/$WANTED/install
+	path=lib/modules/$(ls $_pkg/lib/modules)/kernel
+	mkdir -p $fs/$path
+	$src/slitaz/list_modules.sh drivers/usb/class/usblp.ko | while read module; do
+		dir=$path/$(dirname $module)
+		[ -d $fs/$dir ] || mkdir -p $fs/$dir
+		cp -a $_pkg/$path/$module $fs/$dir
+	done
+}
+
+# Post install/remove commands for Tazpkg.
+post_install()
+{
+	echo ${PACKAGE#*-} >> $1/modules
+}

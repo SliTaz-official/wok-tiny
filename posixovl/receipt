@@ -1,0 +1,41 @@
+# SliTaz package receipt.
+
+PACKAGE="posixovl"
+VERSION="1.2"
+CATEGORY="system-tools"
+SHORT_DESC="FUSE file system that provides POSIX functionality"
+MAINTAINER="pascal.bellard@slitaz.org"
+LICENSE="GPL2"
+TARBALL="$PACKAGE-$VERSION.tar.xz"
+WEB_SITE="http://$PACKAGE.sourceforge.net/"
+WGET_URL="$SF_MIRROR/$PACKAGE/$TARBALL"
+[ -n "$TARGET" ] || TARGET="i486"
+TAGS="filesystem"
+
+DEPENDS="fuse librt libdl libpthread"
+BUILD_DEPENDS="uclibc-cross-compiler-$TARGET pkg-config autoconf automake \
+fuse-dev attr-dev"
+
+# Rules to configure and make the package.
+compile_rules()
+{
+	grep -q 'else if (!S_ISREG' posixovl.c ||
+	sed -i 's/if (!S_ISREG/if (S_ISLNK(cb->ll.mode))\n\t\tcb->sb.st_size = strlen(cb->ll.target);\n\telse &/' posixovl.c
+	sed -i 's/cb->ll.size/0/;s/strlcpy/x&/' posixovl.c
+	[ -d $WOK/fuse/taz ] || cook fuse
+	ln -s $WOK/fuse/taz/*/fs/usr/lib/* /usr/share/uclibc-cross-compiler-$TARGET/lib/ 2> /dev/null
+	ln -s /usr/include/attr /usr/share/uclibc-cross-compiler-$TARGET/include/ 2> /dev/null
+	sh autogen.sh
+	./configure --prefix=/usr \
+		--host=$TARGET-pc-linux-gnu \
+		--mandir=/usr/share/man \
+		CC=uclibc-$TARGET-cc &&
+	make
+}
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	mkdir -p $fs/usr/sbin
+	cp $src/mount.posixovl $fs/usr/sbin 
+}

@@ -95,8 +95,6 @@ do
 	case $opt in
 		cdrom=*)
 			export CDROM=${opt#cdrom=} ;;
-		modprobe=*)
-			export MODPROBE="yes" ;;
 		config=*)
 			export CONFIG=${opt#config=} ;;
 		*)
@@ -137,16 +135,6 @@ if ! fgrep -q "/dev/cdrom" /etc/fstab; then
 	echo '/dev/cdrom      /media/cdrom iso9660 user,ro,noauto       0       0' \
 		>> /etc/fstab
 	status
-fi
-
-# Handle kernel cmdline parameter modprobe=<module_list>
-if [ "$MODPROBE" ]; then
-	MODULES=$(sed -e 's/.* modprobe=\([^ ]*\).*/\1/' -e 's/,/\n/g' < /proc/cmdline)
-	for i in $MODULES; do
-		echo -n "Loading kernel module $i"
-		modprobe $i
-		status
-	done
 fi
 
 # Handle kernel cmdline parameter config=<device>,<path> to source a
