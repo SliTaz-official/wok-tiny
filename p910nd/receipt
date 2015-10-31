@@ -12,6 +12,7 @@ WGET_URL="$SF_MIRROR/$PACKAGE/$TARBALL"
 [ -n "$TARGET" ] || TARGET="i486"
 BUILD_DEPENDS="uclibc-cross-compiler-$TARGET"
 DEPENDS="base-tiny"
+SUGGESTED="module-lp module-usblp"
 CONFIG_FILES="/etc/inetd.conf /etc/rcS.conf"
 
 # Rules to configure and make the package.

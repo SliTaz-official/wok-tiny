@@ -9,10 +9,10 @@ CONTENT=$(sed  -e 's/\[\([^]]*\)|\([^]]*\)|\([^]]*\)\]/[\1{WKP_TBL_BAR}\2{WKP_TB
     -e 's,^\( *|\)|,\1,' -e 's/|\( *\)$/\1/' <<EOT | awk '
 {
   if (/^ *\|.*\|$/) {
-    if (in_array == 0) print "<table class=\"wikitable\">"
+    if (in_array == 0) printf "<table class=\"wikitable\">"
     in_array = 1
     s = $0
-    print "<tr>"
+    printf "<tr>"
     while (match(s,/\|[^\|]*\|/)) {
       q = substr(s,RSTART+1,RLENGTH-2)
       s = substr(s,RSTART+RLENGTH)
@@ -40,9 +40,9 @@ CONTENT=$(sed  -e 's/\[\([^]]*\)|\([^]]*\)|\([^]]*\)\]/[\1{WKP_TBL_BAR}\2{WKP_TB
         c = c " rowspan=\"" substr(q,2,RLENGTH-1) "\""
         q = substr(q,n+1)
       }
-      print "  <td" c ">" q "</td>"
+      printf "  <td" c ">" q "</td>"
     }
-    print "</tr>"
+    printf "</tr>"
   }
   else {
     if (in_array != 0) print "</table>"

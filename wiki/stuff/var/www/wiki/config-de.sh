@@ -1,10 +1,11 @@
-PASSWORD="test"
+PASSWORD=""
 PAGES_DIR="pages/"
 BACKUP_DIR="historique/"
 
 LANG="de"
 WIKI_TITLE="WiKiss"
-START_PAGE="Startseite"
+#START_PAGE="Startseite"
+START_PAGE="Welcome"
 HOME_BUTTON="Startseite"
 HELP_BUTTON="Hilfe"
 DEFAULT_CONTENT="Die Seite %page% ist leer."

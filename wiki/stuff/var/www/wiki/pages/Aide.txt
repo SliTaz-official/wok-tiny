@@ -47,8 +47,11 @@ if len(sys.argv) == 2:
    print "Hello",sys.argv[1]}}
 ----
 Certains caractères spéciaux sont reconnus :
-* Flèches : &lt;^-- : &lt;--, ^--> : -->, &lt;^--> : &lt;-->
+* Flèches : &lt;^-- : &lt;--, ^--> : -->, &lt;^--> : &lt;-->, &lt;^== : &lt;==, ^==> : ==>, &lt;^==> : &lt;==>
 * Copyrights : ^(c) ou ^(C) : (c), ^(r) ou ^(R) : (r)
+* Fractions : ^(1/2) : (1/2), ^(1/4) : (1/4), ^(3/4) : (3/4)
+* Divers : ^(+-) : (+-), ^(!=) : (!=)
+* Quelques icônes : ^(phone) : (phone), ^(wphone) : (wphone), ^(bflag) : (bflag), ^(wflag) : (wflag) ^(radioactive) : (radioactive), ^(sad) : (sad), ^(smile) : (smile), ^(recycle) : (recycle), ^(wheelchair) : (wheelchair), ^(anchor) : (anchor), ^(flower) : (flower), ^(gear) : (gear), ^(volt) : (volt), ^(warn) : (warn), ^(skull) : (skull), ^(star) : (star)
 ----
 Les liens externes et les adresses eMail sont reconnus automagiquement ...
 ^http://wikiss.tuxfamily.org/ --> http://wikiss.tuxfamily.org/

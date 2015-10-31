@@ -1,4 +1,4 @@
-PASSWORD="test"
+PASSWORD=""
 PAGES_DIR="pages/"
 BACKUP_DIR="historique/"
 

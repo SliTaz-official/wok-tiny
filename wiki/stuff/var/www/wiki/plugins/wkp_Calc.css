@@ -1,0 +1,33 @@
+.bordercalc {
+    background-color: #ccc;
+    font-weight: bold;
+    text-align: center;
+    border: 1px solid #999;
+    padding: 0;
+}
+
+.inputcalc {
+    border: none;
+    min-width: 80px;
+    width: 80px;
+    font-size: inherit;
+    padding: 2px;
+}
+
+.inputcalc:hover {
+    background-color: #eee;
+}
+
+.inputcalc:focus {
+    background-color: #ccf;
+}
+
+.tablecalc {
+    border-collapse: collapse;  
+}
+
+.cellcalc {
+    border: 1px solid #999;
+    padding: 0;
+    font-size: 14px;
+}

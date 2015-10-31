@@ -8,6 +8,7 @@ MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="BSD"
 WEB_SITE="http://tiny.slitaz.org/"
 DEPENDS="base-tiny"
+SUGGESTED="module-usbserial module-serial"
 CONFIG_FILES="/etc/inittab"
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
@@ -28,7 +29,7 @@ config_form()
 	[ -n "$TTYS" ] || TTYS=ttyS0
 	[ -n "$SPEED" ] || SPEED=38400
 	cat <<EOT
-You can launch a serial console (ttyS0, ttyS1 ...) or the lguest console (hvc0)
+You can launch a serial console (ttyS0, ttyS1 ... ttyUSB0 ...)
 <table>
 <tr>
 <td>Device</td>
