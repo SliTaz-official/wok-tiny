@@ -8,6 +8,7 @@ MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="GPL2"
 WEB_SITE="http://tiny.slitaz.org/"
 WANTED="linux"
+SUGGESTED="module-ext3 module-fat"
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()

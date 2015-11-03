@@ -1,0 +1,142 @@
+# SliTaz package receipt.
+
+PACKAGE="keyboard"
+VERSION="1.0"
+CATEGORY="meta"
+SHORT_DESC="keyboard, locales and timezone settings"
+MAINTAINER="pascal.bellard@slitaz.org"
+LICENSE="GPL2"
+WEB_SITE="http://tiny.slitaz.org/"
+DEPENDS="base-tiny"
+
+# Rules to configure and make the package.
+compile_rules()
+{
+	mkdir -p $DESTDIR/usr/share $stuff
+	cd $stuff
+	tazpkg get kbd-busybox
+	tazpkg extract kbd-busybox*
+	mv kbd-busybox*/fs/usr/share/kmap $DESTDIR/usr/share
+	cd ..
+	rm -rf $stuff
+}
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	cp -a $install/. $fs/
+}
+
+config_form()
+{
+	cat <<EOT
+<script type="text/javascript">
+	
+var locale = [], timezone = [];
+function setdefault(kbd)
+{
+	if (locale[kbd] != 'undefined') {
+		document.getElementById("locale").value = locale[kbd];
+	}
+	if (timezone[kbd] != 'undefined') {
+		document.getElementById("timezone").value = timezone[kbd];
+	}
+}
+
+EOT
+	awk 'BEGIN { n=0 }
+{
+	print "locale[\"" $1 "\"] = \"" $2 "\";"
+	if ($3 != "-") print "timezone[\"" $1 "\"] = \"" $3 "\";"
+	gsub("_"," ",$4)
+	name[n] = $4
+	kbd[n++] = $1
+}
+END {
+	print "</script>"
+	print "<table>"
+	print "<tr><td>Keyboard</td>"
+	print "<td><select name=\"KEYBOARD\" onChange=\"setdefault(value)\">"
+	for (i=0; i < n; i++)
+		print "	<option value=\"" kbd[i] "\">" name[i] "</option>"
+}' <<EOT | sed "s|value=\"$KEYBOARD\"|& selected=\"selected\"|"
+br-abnt2	pt_BR	America/Sao_Paulo	Brasil_(abnt2)
+us-acentos	pt_BR	America/Sao_Paulo	Brasil_(us-acentos)
+cz-lat2		cs_CZ	Europe/Prague		Cesky
+dk-latin1	da_DK	Europe/Copenhagen	Danso
+de-latin1	de_DE	Europe/Berlin		Deutsch
+de_CH-latin1	de_CH	Europe/Zurich		Deutsch_Schweiz
+sg-latin1	de_CH	Europe/Zurich		Deutsch_Schweiz_(sg)
+uk		en_GB	Europe/London		English_UK
+us		en_US	America/New_York	English_US
+us-acentos	en_US	America/New_York	English_US_(acentos)
+dvorak		en_US	America/New_York	English_US_(dvorak)
+dvorak-l	en_US	America/New_York	English_US_(dvorak-l)
+dvorak-r	en_US	America/New_York	English_US_(dvorak-r)
+es		es_ES	Europe/Madrid		Espanol
+fr-latin1	fr_FR	Europe/Paris		Francais
+be-latin1	fr_BE	Europe/Brussels		Francais_Belgique
+cf		fr_CA	America/Montreal	Francais_Canada
+fr_CH-latin1	fr_CH	Europe/Zurich		Francais_Suisse
+croat		hr_HR	Europe/Zagreb		Hrvatski
+is-latin1	is_IS	Atlantic/Reykjavik	Islenska
+it		it_IT	Europe/Rome		Italiano
+jp106		ja_JP	Asia/Tokyo		Japanese
+hu		hu_HU	Europe/Budapest		Magyar
+nl2		nl_NL	Europe/Amsterdam	Nederlands
+no-latin1	nb_NO	Europe/Oslo		Norsk_(Bokmal)
+no-latin1	nn_NO	Europe/Oslo		Norsk_(Nynorsk)
+pl2		pl_PL	Europe/Warsaw		Polski
+pt-latin1	pt_PT	Europe/Lisbon		Portugues
+ru		ru_RU	Europe/Moscow		Russian
+slovene		sl_SI	Europe/Ljubljan		Slovenski
+fi-latin1	fi_FI	Europe/Helsinki		Suomi
+se-lat6		sv_SE	Europe/Stockholm	Svenska
+trq		tr_TR	Asia/Istanbul		Turkce
+tr_q-latin5	tr_TR	Asia/Istanbul		Turkce_(latin5)
+EOT
+	cat <<EOT
+</select></td>
+</tr>
+<tr>
+<td>Locale</td>
+<td><select name="LOCALE" id="locale">
+EOT
+	( cd /usr/share/i18n/locales ; ls ??_* ) | \
+	sed "s|.*|	<option>&</option>|;s|>$LOCALE<| selected=\"selected\"&|"
+	cat <<EOT
+</select></td>
+</tr>
+<tr>
+<td>Timezone</td>
+<td><select name="TIMEZONE" id="timezone">
+EOT
+	( cd /usr/share/zoneinfo ; find */ -type f ) | \
+	sed "s|.*|	<option>&</option>|;s|>$TIMEZONE<| selected=\"selected\"&|"
+	cat <<EOT
+</select></td>
+</tr>
+</table>
+EOT
+}
+
+post_install()
+{
+	for i in $1/usr/share/kmap/*.kmap ; do
+		[ $i == $1/usr/share/kmap/$KEYBOARD.kmap ] || rm $i
+	done
+	if [ -n "$LOCALE" ]; then
+		mkdir -p $1/usr/share/i18n/locales $1/etc
+		cat > $1/etc/locale.conf <<EOT
+LANG=$LOCALE
+LC_ALL=$LOCALE
+EOT
+		cp /usr/share/i18n/locales/$LOCALE $1/usr/share/i18n/locales
+	fi
+	if [ -n "$TIMEZONE" ]; then
+		mkdir -p $1/usr/share/zoneinfo $1/etc
+		echo "$TIMEZONE" > $1/etc/TZ
+		( cd /usr/share/zoneinfo; echo $TIMEZONE | cpio -o -H newc ) | \
+		( cd $1/usr/share/zoneinfo ; cpio -id )
+	fi
+}
