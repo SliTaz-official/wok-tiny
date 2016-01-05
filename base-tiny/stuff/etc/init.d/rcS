@@ -179,10 +179,9 @@ else
 	echo "Kernel log daemons are disabled in /etc/rc.conf..."
 fi
 
-[ -d /usr/share/kmap ] &&
-echo "Load keymap $(basename /usr/share/kmap/* .kmap)" &&
-cat /usr/share/kmap/* | loadkmap &&
-rm -rf /usr/share/kmap
+[ -d /usr/share/kmap ] && echo -n "Load keymap..." &&
+cat /usr/share/kmap/* | { /bin/loadkmap 2>/etc/null || loadkmap; } &&
+rm -rf /usr/share/kmap && status
 
 # Start all scripts specified with $RUN_SCRIPTS.
 echo "Executing all initialization scripts..."

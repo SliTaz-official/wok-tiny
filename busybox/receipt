@@ -70,8 +70,7 @@ genpkg_rules()
 {
 	cp -a $WOK/base-tiny/stuff/. $fs/
     cp -a $src/_install/bin/busybox $fs/bin
-    for i in /bin/sh /bin/login /bin/getty /bin/false \
-    	     /sbin/getty /sbin/reboot; do
+    for i in /bin/sh /bin/login /bin/false ; do
 	ln $fs/bin/busybox $fs$i
     done
     mkdir -p $fs/etc/init.d
@@ -123,7 +122,7 @@ genpkg_rules()
 
 	rm -rf $fs/*
 	cp rootfs.cpio $fs
-	cp $stuff/busybox*config $fs/busybox.config.txt
+	cp $stuff/busybox-${VERSION%.*}*config $fs/busybox.config.txt
 }
 
 # Force glibc-2.7 reinstall if 2.3.6 still in use.

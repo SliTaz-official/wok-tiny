@@ -25,13 +25,14 @@ end()
 
 if [ ! -s "$1" ]; then
 	cat <<EOT
-Usage: $0 kernel [initrd]
+Usage: $0 kernel [initrd] [@]
 EOT
 elif [ -s "$2" ]; then
-	base_initrd=$(( (($(get 0x1F4 "$1")*33 + 65535)&-65536) + 0x100000 ))
+	base_initrd=$((0x00300000))
 	size_initrd=$(stat -c %s "$2")
 	[ $(($base_initrd + $size_initrd)) -gt $((0x1000000)) ] &&
 	base_initrd=$((0x01400000))
+	[ "$3" ] && base_initrd=$(($3))
 	printf "initrd @%X %X\n" $base_initrd $size_initrd
 	store 0x218 $base_initrd "$1"
 	store 0x21C $size_initrd "$1"

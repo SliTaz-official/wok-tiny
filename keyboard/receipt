@@ -7,17 +7,34 @@ SHORT_DESC="keyboard, locales and timezone settings"
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="GPL2"
 WEB_SITE="http://tiny.slitaz.org/"
+
 DEPENDS="base-tiny"
+BUILD_DEPENDS="advancecomp"
 
 # Rules to configure and make the package.
 compile_rules()
 {
-	mkdir -p $DESTDIR/usr/share $stuff
+	mkdir -p $DESTDIR/usr/share/i18n $stuff
 	cd $stuff
-	tazpkg get kbd-busybox
-	tazpkg extract kbd-busybox*
-	mv kbd-busybox*/fs/usr/share/kmap $DESTDIR/usr/share
-	cd ..
+	for i in kbd-busybox glibc-base glibc-locale ; do
+		tazpkg get $i
+		tazpkg extract $i*
+	done
+	cp -a kbd-busybox*/fs/usr/share/kmap $DESTDIR/usr/share
+	cp -a glibc-*/fs/usr/share/i18n/locales $DESTDIR/usr/share/i18n
+	cp -a glibc-*/fs/usr/share/zoneinfo $DESTDIR/usr/share
+	cd $DESTDIR/usr/share
+	for i in i18n/locales zoneinfo ; do
+		( cd $i; find * -type f | while read f; do
+			grep -q $f $stuff/../receipt || rm -f $f; done )
+		find $i -type d | tac | while read d; do
+			rmdir $d 2> /dev/null
+		done
+	done
+	find kmap/*.kmap i18n/locales zoneinfo | cpio -o -H newc | \
+		gzip -9 > data.cpio.gz
+	advdef -z4 data.cpio.gz
+	cd $stuff/..
 	rm -rf $stuff
 }
 
@@ -117,26 +134,54 @@ EOT
 </select></td>
 </tr>
 </table>
+<input type="checkbox" name="USECMDLINE" $([ "$USECMDLINE" == "on" ] && echo "checked=checked ")value="yes">
+Use the kernel command line arguments <b><i>kmap=</i></b>,
+<b><i>lang=</i></b> and <b><i>tz=</i></b> (+200Kb).
 EOT
 }
 
 post_install()
 {
-	for i in $1/usr/share/kmap/*.kmap ; do
-		[ $i == $1/usr/share/kmap/$KEYBOARD.kmap ] || rm $i
+	if [ "$USECMDLINE" == "yes" ]; then
+		mkdir $1/bin
+		cat > $1/bin/loadkmap <<EOT
+#!/bin/sh
+
+cd /usr/share
+for i in \$(cat /proc/cmdline); do
+	j=\${i#*=}
+	case "\$i" in
+	kmap=*) d=kmap
+		j=\$j.kmap ;;
+	lang=*) d=i18n/locales
+		echo -e "LANG=\$j\nLC_ALL=\$j" > /etc/locale.conf ;;
+	tz=*)	d=zoneinfo
+		echo "\$j" > /etc/TZ ;;
+	*)	continue
+	esac
+	rm -rf \$d
+	zcat data.cpio.gz | cpio -id \$d/\$j 2>/dev/null
+done
+cat kmap/* | busybox loadkmap
+rm -f /bin/loadkmap data.cpio.gz
+EOT
+		chmod +x $1/bin/loadkmap
+	else
+		rm -f $1/usr/share/data.cpio.gz
+	fi
+	for i in $1/usr/share/i18n/locales/* ; do
+		[ $i == $1/usr/share/i18n/locales/$LOCALE ] || rm $i
 	done
-	if [ -n "$LOCALE" ]; then
-		mkdir -p $1/usr/share/i18n/locales $1/etc
-		cat > $1/etc/locale.conf <<EOT
+	[ -n "$LOCALE" ] && cat > $1/etc/locale.conf <<EOT
 LANG=$LOCALE
 LC_ALL=$LOCALE
 EOT
-		cp /usr/share/i18n/locales/$LOCALE $1/usr/share/i18n/locales
-	fi
-	if [ -n "$TIMEZONE" ]; then
-		mkdir -p $1/usr/share/zoneinfo $1/etc
-		echo "$TIMEZONE" > $1/etc/TZ
-		( cd /usr/share/zoneinfo; echo $TIMEZONE | cpio -o -H newc ) | \
-		( cd $1/usr/share/zoneinfo ; cpio -id )
-	fi
+	find $1/usr/share/zoneinfo -type f | while read i; do
+		[ $i == $1/usr/share/zoneinfo/$TIMEZONE ] || rm $i
+	done
+	rmdir $1/usr/share/zoneinfo/* 2> /dev/null
+	[ -n "$TIMEZONE" ] && echo "$TIMEZONE" > $1/etc/TZ
+	for i in $1/usr/share/kmap/*.kmap ; do
+		[ $i == $1/usr/share/kmap/$KEYBOARD.kmap ] || rm $i
+	done
 }

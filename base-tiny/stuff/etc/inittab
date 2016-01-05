@@ -3,14 +3,14 @@
 #
 ::sysinit:/etc/init.d/rcS
 
-# /sbin/getty respawn shell invocations for selected ttys.
-tty1::askfirst:/sbin/getty 38400 tty1
-tty2::askfirst:/sbin/getty 38400 tty2
+# getty respawn shell invocations for selected ttys.
+tty1::askfirst:getty 38400 tty1
+tty2::askfirst:getty 38400 tty2
 
 # Stuff to do when restarting the init
 # process, or before rebooting.
 ::restart:/etc/init.d/rc.shutdown
 ::restart:/init
-::ctrlaltdel:/sbin/reboot
+::ctrlaltdel:reboot
 ::shutdown:/etc/init.d/rc.shutdown
 
