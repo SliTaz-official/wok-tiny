@@ -37,7 +37,7 @@ compile_rules()
 	chgrp 0 $DESTDIR/usr/sbin/dropbear &&
 	install -d -m 755 $DESTDIR/usr/bin &&
 	for i in $DROPBEARS ssh; do
-		ln -s ../sbin/dropbear $DESTDIR/usr/bin/$i
+		ln  $DESTDIR/usr/sbin/dropbear $DESTDIR/usr/bin/$i
 	done
 }
 

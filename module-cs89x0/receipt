@@ -27,7 +27,8 @@ genpkg_rules()
 # Post install/remove commands for Tazpkg.
 post_install()
 {
-	[ "$IRQCS89" ] && IRQCS89="|irq=${IRQCS89%%[, ]*}"
+	[ "$IRQCS89" ] || return
+	IRQCS89="|irq=${IRQCS89%%[, ]*}"
 	[ "$IOCS89" ] && IOCS89="|io=${IOCS89%%[, ]*}"
 	echo "${PACKAGE#*-}$IOCS89$IRQCS89|mode=${MODECS89:-rj45}|debug=${DEBUGCS89:-0}" >> $1/modules
 }

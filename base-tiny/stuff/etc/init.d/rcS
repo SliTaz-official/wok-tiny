@@ -32,15 +32,15 @@ if [ "$EARLY_RUN_SCRIPTS" ]; then
 fi
 
 # Load all modules listed in config file.
-if [ "$LOAD_MODULES" ]; then
+if [ "$LOAD_MODULES" -o -s /modules ]; then
 	echo -n "Loading modules..."
-	for mod in $LOAD_MODULES
+	for mod in $LOAD_MODULES $(cat /modules 2> /dev/null)
 	do
 		echo -n " ${mod%%|*}"
 		modprobe ${mod//|/ }
 	done
 	status
-	[ "$KEEP_MODULES" ] || rm -rf /lib/modules
+	[ "$KEEP_MODULES" ] || rm -rf /lib/modules /modules 2> /dev/null
 fi
 
 # Mount /sys.

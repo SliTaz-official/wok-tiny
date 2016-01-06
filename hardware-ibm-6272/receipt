@@ -32,11 +32,12 @@ pnpdump | awk "BEGIN {s=0} \\
   else if (/ACT Y/) { s=0; print \\"(ACT Y)\\"} \\
   else print \\
 }" > /etc/isapnp.conf
-if isapnp /etc/isapnp.conf > /dev/null 2>&1 ; then
-  modprobe cs89x0 io=0x\$io irq=\$irq > /dev/null 2>&1
+grep CSC6040 /etc/isapnp.conf || break 2
+if isapnp /etc/isapnp.conf ; then
+  modprobe cs89x0 io=0x\$io irq=\$irq
   break 2
 fi
-done ; done
+done ; done > /dev/null 2>&1
 status
 EOT
 	grep pnp.sh $1/etc/rcS.conf ||
@@ -44,10 +45,10 @@ EOT
 	list=""
 	for i in $IRQ_CS89X0_LIST ; do
 		case " 15 12 11 10 9 7 6 5 4 3 " in
-		*\ $i\ *)	list="$list $i "
+		*\ $i\ *)	list="$list $i"
 		esac
 	done
-	sed -i "s/IRQ_CS89X0_LIST/${list:-15 12 11 10}/" $1/etc/init.d/pnp.sh
+	sed -i "s/ IRQ_CS89X0_LIST/${list:-15 12 11 10}/" $1/etc/init.d/pnp.sh
 	sed -i 's/cs89x0[^ "]* //' $1/etc/rcS.conf
 	sed -i '/rm -f .sbin.*pnp/d' $1/etc/init.d/pnp.sh
 	[ "$CS89X0_WIPEPNP" == "on" ] &&
