@@ -14,6 +14,7 @@ WEB_SITE2="http://elinux.org/Linux_Tiny"
 PATCH="https://www.selenic.com/tiny/2.6.14-tiny1.patch.bz2"
 AUTO_SELECTION="always"
 
+DEPENDS="memtest ipxe"  # bundle may install a boot menu
 BUILD_DEPENDS="slitaz-toolchain perl git lzma wget gcc2 advancecomp"
 
 # Rules to configure and make the package.
@@ -46,6 +47,10 @@ compile_rules()
 	grep -q "CONFIG_MODULES=y" .config &&
 	make ARCH=i386 CC=gcc-2 HOSTCC=gcc-2 -j 4 modules &&
 	make ARCH=i386 INSTALL_MOD_PATH=$DESTDIR -j 1 modules_install || true
+	cc -o bundle.o -Wa,-algms=bundle.lst -c $stuff/bundle.S
+	objcopy -O binary bundle.o bundle.bin
+	cp $stuff/bundle .
+	./bundle
 }
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
@@ -57,7 +62,7 @@ genpkg_rules()
 	cp -a $src/System.map $fs/boot/
 	cp -a $src/.config $fs/boot/config
 	cp -a $src/config-busybox $fs/boot
-	cp -a $stuff/bundle $fs/boot
+	cp -a $src/bundle.sh $fs/boot/bundle
 }
 
 # Pre and post install commands for Tazpkg.
