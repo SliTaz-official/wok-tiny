@@ -15,5 +15,5 @@ TARGET="i486"
 genpkg_rules()
 {
 	mkdir -p $fs/boot
-	cp $SOURCES_REPOSITORY/$TARBALL $fs/boot
+	cp $SOURCES_REPOSITORY/$TARBALL $fs/boot/$PACKAGE
 }
