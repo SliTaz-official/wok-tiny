@@ -14,8 +14,12 @@ WEB_SITE2="http://elinux.org/Linux_Tiny"
 PATCH="https://www.selenic.com/tiny/2.6.14-tiny1.patch.bz2"
 AUTO_SELECTION="always"
 
-DEPENDS="memtest ipxe"  # bundle may install a boot menu
+DEPENDS=""
 BUILD_DEPENDS="slitaz-toolchain perl git lzma wget gcc2 advancecomp"
+
+case "$TARGET" in
+	i486) SUGGESTED="memtest ipxe";;  # bundle may install a boot menu
+esac
 
 # Rules to configure and make the package.
 compile_rules()

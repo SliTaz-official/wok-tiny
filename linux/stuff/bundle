@@ -85,8 +85,7 @@ else
 		menu=$(get 0x1F2 "$1")
 		[ $(get $(($menu -3)) "$1" 2) -eq 24937 ] && skip=4 || skip=0
 		ddq bs=1 skip=$menu count=$((0x1F3 - $menu)) if="$1" | \
-		od -v -t u1 -w1 -An | awk -vx=$skip 'BEGIN { state=0 }
-{
+		od -v -t u1 -w1 -An | awk -vx=$skip '{
 	if (--skip >= 0) next
 	if (--bytes < 0) {
 		if ($1 == 0) {
