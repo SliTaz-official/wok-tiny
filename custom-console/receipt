@@ -1,44 +1,125 @@
 # SliTaz package receipt.
 
 PACKAGE="custom-console"
-VERSION="1.0"
+VERSION="2.0"
 CATEGORY="meta"
-SHORT_DESC="Configure a custom console"
+SHORT_DESC="Configure the consoles"
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="BSD"
 WEB_SITE="http://tiny.slitaz.org/"
 DEPENDS="base-tiny"
 SUGGESTED="module-usbserial module-serial"
-CONFIG_FILES="/etc/inittab"
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
-	mkdir -p $fs/etc
+	mkdir -p $fs/etc/init.d
 }
 
 post_install()
 {
-	sed -i '/^tty[2-9]::/d' $1/etc/inittab
-	sed -i "s|^tty1:.*|$TTYS::respawn:/sbin/getty $SPEED $TTYS|" \
-		$1/etc/inittab
+	[ "$KERNEL_TTY" == "none" ] ||
+	echo -n " console=tty0 console=$KERNEL_TTY,${SPEED_KERNEL_TTY}n8" \
+		>> $1/boot/cmdline
+	TTY_LIST=""
+	for i in $(seq 1 63); do
+		eval n=\$TTY$i
+		[ -n "$n" ] || continue
+		TTY_LIST="$TTY_LIST tty$i:38400"
+	done
+	for i in $(seq 0 3 | sed 's/^/TTYS/' ; seq 0 3 | sed 's/^/TTYUSB/'); do
+		eval n=\$$i
+		[ -n "$n" ] || continue
+		eval s=\$SPEED_$i
+		TTY_LIST="$TTY_LIST ${i/TTY/tty}:$s"
+	done
+	[ -s $1/etc/init.d/tty.sh ] || cat > $1/etc/init.d/tty.sh <<EOT
+#!/bin/sh
+
+. /etc/init.d/rc.functions
+EOT
+	chmod +x $1/etc/init.d/tty.sh
+	cat >> $1/etc/init.d/tty.sh <<EOT
+
+sed -i '/^tty/d' /etc/inittab
+EOT
+	[ -n "$TTY_LIST" ] ||
+	echo 'echo -n "Disable login console"' >> $1/etc/init.d/tty.sh
+	[ -n "$TTY_LIST" ] && cat >> $1/etc/init.d/tty.sh <<EOT
+echo -n "Enable login console from "
+for i in$TTY_LIST; do
+	[ -e /dev/\${i%:*} ] || continue
+	case "\$i" in
+	ttyS*) grep -q serial /proc/ioports || continue ;;
+	esac
+	echo -n "\${i%:*} "
+	echo "\${i%:*}::respawn:/sbin/getty \${i#*:} \${i%:*}" >> /etc/inittab
+done
+kill -1 1
+status
+EOT
+	grep tty.sh $1/etc/rcS.conf ||
+	sed -i 's/RUN_SCRIPTS="/&tty.sh /' $1/etc/rcS.conf
 }
 
 config_form()
 {
-	[ -n "$TTYS" ] || TTYS=ttyS0
-	[ -n "$SPEED" ] || SPEED=38400
 	cat <<EOT
-You can launch a serial console (ttyS0, ttyS1 ... ttyUSB0 ...)
+<hr />
+Virtual consoles
 <table>
-<tr>
-<td>Device</td>
-<td><input type="text" name="TTYS" value="$TTYS" /></td>
-</tr>
-<tr>
-<td>Speed</td>
-<td><input type="text" name="SPEED" value="$SPEED" /></td>
+EOT
+	for i in $(seq 1 63); do
+		[ $(($i & 7)) -eq 1 ] && echo "<tr>"
+		cat <<EOT
+<td>
+<input type="checkbox" name="TTY$i" /> tty$i
+</td>
+EOT
+		[ $(($i & 7)) -eq 0 ] && echo "</tr>"
+	done
+	cat <<EOT
+<td></td>
 </tr>
 </table>
+<hr />
+Serial consoles
+<table>
 EOT
+	for i in $(seq 0 3 | sed 's/^/TTYS/' ; seq 0 3 | sed 's/^/TTYUSB/'); do
+		cat <<EOT
+<tr>
+<td><input type="checkbox" name="$i" /> ${i/TTY/tty} </td>
+EOT
+		for j in 115200 57600 38400 19200 9600 4800 2400 1200 600 300; do
+			[ $j -eq 4800 ] && cat <<EOT
+</tr>
+<tr>
+<td></td>
+EOT
+			checked=
+			[ $j -eq 9600 ] && checked="checked=checked "
+			cat <<EOT
+<td><input type="checkbox" name="SPEED_$i[]" value="$j" $checked/> $j</td>
+EOT
+		done
+	done
+	cat <<EOT
+</table>
+</tr>
+Kernel serial console 
+<select name="KERNEL_TTY">
+<option>none</option>
+EOT
+	for i in $(seq 0 3); do
+		echo "<option>ttyS$i</option>"
+	done
+	cat <<EOT
+</select>
+<select name="SPEED_KERNEL_TTY">
+EOT
+	for i in 115200 57600 38400 19200 9600 4800 2400 1200 600 300; do
+		echo "<option>$i</option>"
+	done
+	echo "</select>"
 }
