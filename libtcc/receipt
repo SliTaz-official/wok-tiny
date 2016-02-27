@@ -3,6 +3,7 @@
 PACKAGE="libtcc"
 VERSION="0.9.25"
 CATEGORY="development"
+GROUP="library"
 SHORT_DESC="Tiny C Compiler code generator library"
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="LGPL"

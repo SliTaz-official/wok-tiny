@@ -3,6 +3,7 @@
 PACKAGE="custom-console"
 VERSION="2.0"
 CATEGORY="meta"
+GROUP="system"
 SHORT_DESC="Configure the consoles"
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="BSD"
@@ -18,6 +19,8 @@ genpkg_rules()
 
 post_install()
 {
+	respawn=respawn
+	[ "$ASKFIRST" ] && respawn=askfirst
 	[ "$KERNEL_TTY" == "none" ] ||
 	echo -n " console=tty0 console=$KERNEL_TTY,${SPEED_KERNEL_TTY}n8" \
 		>> $1/boot/cmdline
@@ -48,18 +51,23 @@ EOT
 	[ -n "$TTY_LIST" ] && cat >> $1/etc/init.d/tty.sh <<EOT
 echo -n "Enable login console from "
 for i in$TTY_LIST; do
-	[ -e /dev/\${i%:*} ] || continue
-	case "\$i" in
-	ttyS*) grep -q serial /proc/ioports || continue ;;
+	dev=\${i%:*}
+	major=4
+	minor=\$(echo \$dev | sed 's/[^0-9]*//')
+	case "\$dev" in
+	ttyUSB*) major=188 ;;
+	ttyS*)	 minor=\$((64+\$minor)) ;;
 	esac
-	echo -n "\${i%:*} "
-	echo "\${i%:*}::respawn:/sbin/getty \${i#*:} \${i%:*}" >> /etc/inittab
+	[ -e /dev/\$dev ] || mknod /dev/\$dev c \$major \$minor
+	stty -F /dev/\$dev > /dev/null 2>&1 || continue
+	echo -n "\$dev "
+	echo "\$dev::$respawn:getty \${i#*:} /dev/\$dev" >> /etc/inittab
 done
 kill -1 1
 status
 EOT
 	grep tty.sh $1/etc/rcS.conf ||
-	sed -i 's/RUN_SCRIPTS="/&tty.sh /' $1/etc/rcS.conf
+	sed -i 's/^RUN_SCRIPTS="/&tty.sh /' $1/etc/rcS.conf
 }
 
 config_form()
@@ -107,6 +115,11 @@ EOT
 	cat <<EOT
 </table>
 </tr>
+<p>
+<input type="checkbox" name="ASKFIRST" checked=checked />
+Confirm console launch (spare some memory)
+</p>
+<p>
 Kernel serial console 
 <select name="KERNEL_TTY">
 <option>none</option>
@@ -121,5 +134,5 @@ EOT
 	for i in 115200 57600 38400 19200 9600 4800 2400 1200 600 300; do
 		echo "<option>$i</option>"
 	done
-	echo "</select>"
+	echo -e "</select>\n</p>"
 }

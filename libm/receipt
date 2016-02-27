@@ -3,6 +3,7 @@
 PACKAGE="libm"
 VERSION="0.9.31"
 CATEGORY="base-system"
+GROUP="library"
 SHORT_DESC="Math runtime library"
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="LGPL"

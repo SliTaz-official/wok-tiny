@@ -3,6 +3,7 @@
 PACKAGE="libgcc_s"
 VERSION="4.2.1"
 CATEGORY="base-system"
+GROUP="library"
 SHORT_DESC="GCC runtime library"
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="LGPL"

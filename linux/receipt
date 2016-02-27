@@ -55,6 +55,8 @@ compile_rules()
 	objcopy -O binary bundle.o bundle.bin
 	cp $stuff/bundle .
 	./bundle
+	cc -o cmdline.o -Wa,-algms=cmdline.lst -c $stuff/cmdline.S
+	objcopy -O binary cmdline.o cmdline.bin
 }
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
@@ -63,6 +65,7 @@ genpkg_rules()
 	mkdir $fs/boot
 	cp -a $src/arch/i386/boot/bzImage $fs/boot/
 	dd if=$src/bootloader.bin of=$fs/boot/bzImage conv=notrunc
+	dd if=$src/cmdline.bin bs=1 seek=560 of=$fs/boot/bzImage conv=notrunc
 	cp -a $src/System.map $fs/boot/
 	cp -a $src/.config $fs/boot/config
 	cp -a $src/config-busybox $fs/boot
@@ -73,7 +76,9 @@ genpkg_rules()
 post_install()
 {
     echo "Processing post-install commands..."
-    chroot "$1/" depmod -a $VERSION-slitaz
+    chroot "$1/" /boot/depmod -a $VERSION-slitaz
+    [ -s $1/boot/cmdline ] && cat $1/boot/cmdline | sed 's/^ *//' | \
+	dd of=$1/boot/bzImage conv=notrunc bs=1 seek=768 count=3072
     # GRUB stuff.
     if [ -f "$1/boot/grub/menu.lst" ]; then
     	root_dev=`cat $1/boot/grub/menu.lst | grep root= | sed 's/.*root=\([^ ]*\).*/\1/' | head -n 1`
