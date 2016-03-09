@@ -2,7 +2,8 @@
 
 PACKAGE="fbvnc-ssh"
 VERSION="1.0"
-CATEGORY="network"
+CATEGORY="meta"
+GROUP="network"
 SHORT_DESC="VNC client in frame buffer within a SSH tunnel."
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="BSD"
@@ -34,6 +35,10 @@ config_form()
 </tr>
 </table>
 <p>
+<input type="checkbox" name="ASKFIRST" checked=checked />
+Confirm VNC console launch (spare some memory)
+</p>
+<p>
 You should add the public key in <b>\$HOME/.ssh/authorized_keys</b> of the VNC/SSH server.
 </p>
 <p>
@@ -51,17 +56,19 @@ EOT
 
 post_install()
 {
+	respawn=respawn
+	[ "$ASKFIRST" ] && respawn=askfirst
 	sed -i 's/\(fbvnc -bpp [0-9]*\) \([^|]*\)/\1 127.0.0.1 5900/;/kill -1 1/d' $1/etc/init.d/local.sh
 	cat >> $1/etc/init.d/local.sh <<EOT
 
 # From fbvnc-ssh
 EOT
 	[ "$VNCONLY" == "yes" ] &&  cat >> $1/etc/init.d/local.sh <<EOT
-sed -i '/^tty[3-9]:.*/d' /etc/inittab
+sed -i '/^tty[2-9]:.*/d' /etc/inittab
 EOT
 	cat >> $1/etc/init.d/local.sh <<EOT
 grep -qs fbvnc /etc/inittab &&
-sed -i "s|tty2:.*|tty2::respawn:/usr/bin/ssh -i /etc/dropbear/dropbear_dss_host_key -i /etc/dropbear/dropbear_rsa_host_key -y -N -L 5900:127.0.0.1:\$VNCPORT $VNCUSER@\$VNCSERVER|" /etc/inittab
+echo "vnc::$respawn:/usr/bin/ssh -i /etc/dropbear/dropbear_dss_host_key -i /etc/dropbear/dropbear_rsa_host_key -y -N -L 5900:127.0.0.1:\$VNCPORT $VNCUSER@\$VNCSERVER" >> /etc/inittab
 kill -1 1
 EOT
 }

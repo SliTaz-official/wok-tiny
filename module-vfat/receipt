@@ -1,6 +1,6 @@
 # SliTaz package receipt.
 
-PACKAGE="module-fat"
+PACKAGE="module-vfat"
 VERSION="2.6.14"
 CATEGORY="base-system"
 GROUP="filesystem"

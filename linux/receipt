@@ -27,6 +27,7 @@ compile_rules()
 	[ -s $SRC/$(basename $PATCH) ] ||
 	wget --no-check-certificate -O $SRC/$(basename $PATCH) $PATCH
 	bzcat $SRC/$(basename $PATCH) | patch -p1
+	patch -p0 < $stuff/linux-2.6.14-unpack.u
 	sed -i 's|\([>\.]\)val|\1u.val|;s|\([>\.]\)next|\1u.next|;216s|};|} u;|' lib/inflate.c
 	sed '/DEBUG/,/* kstrdup/d' < mm/slab.c > mm/kstrdup.c
 	echo 'obj-y += kstrdup.o' >> mm/Makefile
@@ -44,7 +45,8 @@ compile_rules()
 	cc -o bootloader.o -Wa,-algms=bootloader.lst -c $stuff/bootloader.S
 	objcopy -O binary bootloader.o bootloader.bin
 
-	sed -i 's/^config %config/config/' Makefile
+	sed -i '/config %config:/{NNNps/config %config:/%config:/}' Makefile
+	sed -i 's/^config %config:/config:/' Makefile
 	cp $stuff/linux-$VERSION-slitaz.config .config
 	yes '' | make ARCH=i386 HOSTCC=gcc-2 config
 	make ARCH=i386 CC=gcc-2 HOSTCC=gcc-2 -j 4 bzImage

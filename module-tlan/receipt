@@ -1,0 +1,61 @@
+# SliTaz package receipt.
+
+PACKAGE="module-tlan"
+VERSION="2.6.14"
+CATEGORY="base-system"
+GROUP="driver,ethernet"
+SHORT_DESC="Kernel module for TI ThunderLAN based ethernet PCI adapters"
+MAINTAINER="pascal.bellard@slitaz.org"
+LICENSE="GPL2"
+WEB_SITE="http://tiny.slitaz.org/"
+WANTED="linux"
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	local path
+	export src=$WOK/$WANTED/source/linux-$VERSION
+	export _pkg=$WOK/$WANTED/install
+	path=lib/modules/$(ls $_pkg/lib/modules)/kernel
+	mkdir -p $fs/$path
+	$src/slitaz/list_modules.sh drivers/net/${PACKAGE#*-}* | while read module; do
+		dir=$path/$(dirname $module)
+		[ -d $fs/$dir ] || mkdir -p $fs/$dir
+		cp -a $_pkg/$path/$module $fs/$dir
+	done
+}
+
+# Post install/remove commands for Tazpkg.
+post_install()
+{
+	echo "${PACKAGE#*-}|aui=${AUITLAN:-0}|bbuf=${BIGBUFTLAN:-0}|speed=${SPEEDTLAN:-0}|duplex=${DUPLEXTLAN:-0}" >> $1/modules
+}
+
+config_form()
+{
+	cat <<EOT
+<h4>TI ThunderLAN based ethernet PCI adapter</h4>
+<table>
+<tr>
+<td>Speed</td>
+<td><select name="SPEEDTLAN">
+	<option value="0">default</option>
+	<option value="10"$([ "$SPEEDTLAN" == "10" ] && echo ' selected="selected"')>10 Mb</option>
+	<option value="100"$([ "$SPEEDTLAN" == "100" ] && echo ' selected="selected"')>100 Mb</option>
+</select></td>
+</tr>
+<tr>
+<td>Mode</td>
+<td><select name="DUPLEXTLAN">
+	<option value="0">default</option>
+	<option value="1"$([ "$DUPLEXTLAN" == "1" ] && echo ' selected="selected"')>half duplex</option>
+	<option value="2"$([ "$DUPLEXTLAN" == "2" ] && echo ' selected="selected"')>full duplex</option>
+</select></td>
+</tr>
+</table>
+<input type="checkbox" name="AUITLAN" value="1" />
+ThunderLAN use AUI port(s)<br>
+<input type="checkbox" name="BIGBUFTLAN" value="1" />
+ThunderLAN use big buffer<br>
+EOT
+}
