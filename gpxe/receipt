@@ -3,7 +3,7 @@
 PACKAGE="gpxe"
 VERSION="0.9.3"
 CATEGORY="network"
-SHORT_DESC="Forward PXE to Slitaz Web Boot"
+SHORT_DESC="Forward PXE to SliTaz Web Boot"
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="GPL"
 WEB_SITE="http://boot.slitaz.org/"
