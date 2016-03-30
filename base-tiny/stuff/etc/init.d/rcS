@@ -48,6 +48,13 @@ echo -n "Mounting sys filesystem..."
 mount sysfs
 status
 
+if [ -e /sbin/mdev ]; then
+	echo -n "Start hotplug..."
+	echo /sbin/mdev > /proc/sys/kernel/hotplug
+	mdev -s
+	status
+fi
+
 echo -n "Updating /dev..."
 for i in /sys/block/*/dev /sys/block/*/*/dev ; do
 	[ -s "$i" ] || continue

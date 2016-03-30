@@ -44,9 +44,9 @@ compile_rules()
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
-	mkdir -p $fs/usr $fs/etc/init.d $fs/etc/dropbear
+	mkdir -p $fs/usr/sbin $fs/etc/init.d $fs/etc/dropbear
 	cp -a $install/usr/bin $fs/usr
-	cp -a $install/usr/sbin $fs/usr
+	ln $fs/usr/bin/dbclient $fs/usr/sbin/dropbear
 	ln -s daemon $fs/etc/init.d/dropbear
 	cat > $fs/etc/dropbear/banner <<EOT
 

@@ -17,7 +17,8 @@ genpkg_rules()
 	export src=$WOK/$WANTED/source/linux-$VERSION
 	export _pkg=$WOK/$WANTED/install
 	path=lib/modules/$(ls $_pkg/lib/modules)/kernel
-	mkdir -p $fs/$path
+	mkdir -p $fs/$path $fs/sbin
+	ln -s /bin/busybox $fs/sbin/mdev
 	$src/slitaz/list_modules.sh drivers/usb/storage/usb-storage.ko | while read module; do
 		dir=$path/$(dirname $module)
 		[ -d $fs/$dir ] || mkdir -p $fs/$dir
