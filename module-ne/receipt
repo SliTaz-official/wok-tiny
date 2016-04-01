@@ -31,6 +31,7 @@ post_install()
 	[ "$IRQNE2K" ] && IRQNE2K="|irq=${IRQNE2K// /,}"
 	[ "$IONE2K" ] && IONE2K="|io=${IONE2K// /,}"
 	[ "$BADNE2K" == "ON" ] && BADNE2K="|bad" || BADNE2K=""
+	grep -qs "^${PACKAGE#*-}|" $1/modules ||
 	echo "${PACKAGE#*-}${IONE2K:-|io=0x300}$IRQNE2K$BADNE2K" >> $1/modules
 }
 

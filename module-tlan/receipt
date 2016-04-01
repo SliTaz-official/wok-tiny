@@ -28,6 +28,7 @@ genpkg_rules()
 # Post install/remove commands for Tazpkg.
 post_install()
 {
+	grep -qs "^${PACKAGE#*-}|" $1/modules ||
 	echo "${PACKAGE#*-}|aui=${AUITLAN:-0}|bbuf=${BIGBUFTLAN:-0}|speed=${SPEEDTLAN:-0}|duplex=${DUPLEXTLAN:-0}" >> $1/modules
 }
 

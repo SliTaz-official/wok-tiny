@@ -29,9 +29,7 @@ genpkg_rules()
 # Post install/remove commands for Tazpkg.
 post_install()
 {
-	cat >> $1/modules <<EOT
-ide-core
-ide-disk
-ide-generic
-EOT
+	for i in ide-core ide-disk ide-generic ; do
+		grep -qs ^$i$ $1/modules || echo $i >> $1/modules
+	done
 }

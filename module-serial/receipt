@@ -31,5 +31,7 @@ genpkg_rules()
 # Post install/remove commands for Tazpkg.
 post_install()
 {
-	echo 8250_pci >> $1/modules
+	for i in serial_core 8250 8250_pci ; do
+		grep -qs ^$i$ $1/modules || echo $i >> $1/modules
+	done
 }

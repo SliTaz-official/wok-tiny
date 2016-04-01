@@ -30,7 +30,9 @@ genpkg_rules()
 # Post install/remove commands for Tazpkg.
 post_install()
 {
-	echo ${PACKAGE#*-} >> $1/modules
+	for i in nls_base fat vfat ; do
+		grep -qs ^$i$ $1/modules || echo $i >> $1/modules
+	done
 	for i in vfat fat msdos ; do
 		grep -qs ^$i$ $1/etc/filesystems || \
 			echo "$i" >> $1/etc/filesystems

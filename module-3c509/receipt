@@ -30,6 +30,7 @@ post_install()
 {
 	[ "$IRQ3C509" ] && IRQ3C509="|irq=${IRQ3C509// /,}"
 	[ "$XCVR3C509" ] && XCVR3C509="|xcvr=$XCVR3C509"
+	grep -qs "^${PACKAGE#*-}|" $1/modules ||
 	echo "${PACKAGE#*-}$IRQ3C509|debug=${DBG3C509:-0}$XCVR3C509|max_interrupt_work=${MAXE3C509:-10}" >> $1/modules
 }
 

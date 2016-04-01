@@ -29,5 +29,7 @@ genpkg_rules()
 # Post install/remove commands for Tazpkg.
 post_install()
 {
-	echo ${PACKAGE#*-} >> $1/modules
+	for i in usbcore usblp ; do
+		grep -qs ^$i$ $1/modules || echo $i >> $1/modules
+	done
 }
