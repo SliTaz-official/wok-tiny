@@ -32,6 +32,7 @@ compile_rules()
 	sed '/DEBUG/,/* kstrdup/d' < mm/slab.c > mm/kstrdup.c
 	echo 'obj-y += kstrdup.o' >> mm/Makefile
 	sed -i 's|3.1024|11*256|' arch/i386/boot/compressed/misc.c
+	sed -i 's/O_CREAT/&|O_TRUNC/' init/initramfs.c
 	which advdef 2> /dev/null &&
 	sed -i 's|gzip)|&\n	advdef -z4 $@|' usr/Makefile arch/i386/boot/compressed/Makefile
 

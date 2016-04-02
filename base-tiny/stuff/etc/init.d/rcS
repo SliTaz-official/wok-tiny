@@ -187,7 +187,7 @@ else
 fi
 
 [ -d /usr/share/kmap ] && echo -n "Load keymap..." &&
-cat /usr/share/kmap/* | { /bin/loadkmap 2>/etc/null || loadkmap; } &&
+cat /usr/share/kmap/* | { /bin/loadkmap 2>/dev/null || loadkmap; } &&
 rm -rf /usr/share/kmap && status
 
 # Start all scripts specified with $RUN_SCRIPTS.
