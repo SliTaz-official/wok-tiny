@@ -31,7 +31,7 @@ post_install()
 	grep -q inetd $1/etc/rcS.conf ||
 	sed -i 's/^RUN_DAEMONS="/&inetd /' $1/etc/rcS.conf
 	sed -i '/#ftp/d' $1/etc/inetd.conf
-	grep -q ftpd $1/etc/inetd.conf || cat >> $1/etc/inetd.conf <<EOT
+	grep -q 'stream.*ftpd' $1/etc/inetd.conf || cat >> $1/etc/inetd.conf <<EOT
 ftp	stream	tcp	nowait	root	ftpd ftpd $ROOT
 EOT
 }
