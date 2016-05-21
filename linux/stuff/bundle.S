@@ -13,15 +13,12 @@ start:
 	movw	%di, %sp
 
 	// patch disk parameter table
-	xorw	%ax, %ax
+	xorw	%cx, %cx
 	movw	$0x78, %bx
-	movw	%ax, %ds
+	movw	%cx, %ds
 	ldsw	(%bx), %si	
 	pushw	%ss
 	popw	%es
-	movw	$64/2, %cx
-	rep
-	 stosw
 	movb	$6, %cl
 	pushw	%di
 	rep
@@ -66,8 +63,8 @@ notcur:
 	lodsw		// CRC16
 	lodsw		// sector count
 #endif
-	cmpw	%bx, (%si)
-	jnc	menulp
+	cmpw	$0, (%si)
+	jne	menulp
 #ifdef CHECK_FILES
 	movw	$msgcrc, %si
 	movb	$' ', %al
@@ -150,10 +147,13 @@ doit:
 	movw	%bx, %di
 scanboot:
 	incw	%di
+	cmpw	%bx, %di
+	je	found
 	cmpw	$0x5897, -3(%di)	// xchgw %ax, %di; popw	%ax
 	jne	scanboot
 	cmpw	$0xE841, -1(%di)	// incw %cx ; call ...
 	jne	scanboot
+found:
 	pushw	%ds
 	pushw	%di
 	movb	0x1F1(%bx), %al		// setup size
