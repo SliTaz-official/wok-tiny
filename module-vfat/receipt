@@ -19,7 +19,7 @@ genpkg_rules()
 	export _pkg=$WOK/$WANTED/install
 	path=lib/modules/$(ls $_pkg/lib/modules)/kernel
 	mkdir -p $fs/$path $fs/etc
-	$src/slitaz/list_modules.sh fs/${PACKAGE#*-} | while read module; do
+	$src/slitaz/list_modules.sh fs/${PACKAGE#*-} fs/nls | while read module; do
 		dir=$path/$(dirname $module)
 		[ -d $fs/$dir ] || mkdir -p $fs/$dir
 		cp -a $_pkg/$path/$module $fs/$dir
@@ -30,7 +30,7 @@ genpkg_rules()
 # Post install/remove commands for Tazpkg.
 post_install()
 {
-	for i in nls_base fat vfat ; do
+	for i in $(cd $1/lib/modules/*/kernel/fs/nls; ls nls*) fat vfat ; do
 		grep -qs ^$i$ $1/modules || echo $i >> $1/modules
 	done
 	for i in vfat fat msdos ; do

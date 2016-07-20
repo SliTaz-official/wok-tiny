@@ -3,7 +3,7 @@
 PACKAGE="hardware-ibm-6272"
 VERSION="1.0"
 CATEGORY="meta"
-GROUP="system"
+GROUP="ststem"
 MAINTAINER="devel@slitaz.org"
 LICENSE="BSD"
 SHORT_DESC="IBM 300GL 6272/6282 (P75-233 ISA/PCI/USB/ETH desktop) hardware support"
@@ -23,7 +23,7 @@ EOT
 	chmod +x $1/etc/init.d/pnp.sh
 	cat >> $1/etc/init.d/pnp.sh <<EOT
 
-grep -qs CS8920 /var/log/dmesg.log &&
+dmesg | grep -qs CS8920 &&
 echo -n "Switching on cs89x0 isa pnp ethernet card " &&
 pnpdump > /etc/isapnp.conf.base
 for io in \$(seq 360 -10 250); do for irq in IRQ_CS89X0_LIST; do
@@ -43,6 +43,8 @@ fi
 done ; done > /dev/null 2>&1 && rm -f /etc/isapnp.conf.base
 status
 EOT
+	grep -q '^# CONFIG_PRINTK is not set' $1/boot/config &&
+	sed -i '/CS8920/d' $1/etc/init.d/pnp.sh
 	grep pnp.sh $1/etc/rcS.conf ||
 	sed -i 's/EARLY_RUN_SCRIPTS="/&pnp.sh /' $1/etc/rcS.conf
 	list=""

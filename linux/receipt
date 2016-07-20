@@ -15,7 +15,8 @@ PATCH="https://www.selenic.com/tiny/2.6.14-tiny1.patch.bz2"
 AUTO_SELECTION="always"
 
 DEPENDS=""
-BUILD_DEPENDS="slitaz-toolchain perl git lzma wget gcc2 advancecomp"
+BUILD_DEPENDS="slitaz-toolchain perl git lzma wget gcc2"
+BUILD_SUGGESTED="advancecomp zopfli"
 
 case "$TARGET" in
 	i486) SUGGESTED="memtest ipxe";;  # bundle may install a boot menu
@@ -28,6 +29,7 @@ compile_rules()
 	wget --no-check-certificate -O $SRC/$(basename $PATCH) $PATCH
 	bzcat $SRC/$(basename $PATCH) | patch -p1
 	patch -p0 < $stuff/linux-2.6.14-unpack.u
+	patch -p0 < $stuff/jsclipboard.u
 	sed -i 's|\([>\.]\)val|\1u.val|;s|\([>\.]\)next|\1u.next|;216s|};|} u;|' lib/inflate.c
 	sed '/DEBUG/,/* kstrdup/d' < mm/slab.c > mm/kstrdup.c
 	echo 'obj-y += kstrdup.o' >> mm/Makefile
@@ -35,6 +37,8 @@ compile_rules()
 	sed -i 's/O_CREAT/&|O_TRUNC/' init/initramfs.c
 	which advdef 2> /dev/null &&
 	sed -i 's|gzip)|&\n	advdef -z4 $@|' usr/Makefile arch/i386/boot/compressed/Makefile
+	which zopfli 2> /dev/null &&
+	sed -i 's|gzip -f -9 <|time zopfli --i100 -c|' scripts/Makefile.lib
 
 	if [ ! -s $WOK/busybox/source/busybox*/rootfs.cpio ]; then
 		tazwok cook busybox
