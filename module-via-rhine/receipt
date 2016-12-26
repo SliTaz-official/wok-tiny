@@ -1,0 +1,67 @@
+# SliTaz package receipt.
+
+PACKAGE="module-via-rhine"
+VERSION="2.6.14"
+CATEGORY="base-system"
+GROUP="driver,ethernet"
+SHORT_DESC="Kernel module for the VIA Rhine (VT86C100A, VT6102, VT6105 or VT8235) driver"
+MAINTAINER="pascal.bellard@slitaz.org"
+LICENSE="GPL2"
+WEB_SITE="http://tiny.slitaz.org/"
+WANTED="linux"
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	local path
+	export src=$WOK/$WANTED/source/linux-$VERSION
+	export _pkg=$WOK/$WANTED/install
+	path=lib/modules/$(ls $_pkg/lib/modules)/kernel
+	mkdir -p $fs/$path
+	$src/slitaz/list_modules.sh drivers/net/${PACKAGE#*-}* | while read module; do
+		dir=$path/$(dirname $module)
+		[ -d $fs/$dir ] || mkdir -p $fs/$dir
+		cp -a $_pkg/$path/$module $fs/$dir
+	done
+}
+
+# Post install/remove commands for Tazpkg.
+post_install()
+{
+	[ "$IRQRHINE" ] && IRQRHINE="|irq=${IRQRHINE// /,}"
+	grep -qs "^${PACKAGE#*-}|" $1/modules ||
+	echo "${PACKAGE#*-}$IRQRHINE|debug=${DBGRHINE:-0}|max_interrupt_work=${MAXERHINE:-10}" >> $1/modules
+}
+
+config_form()
+{
+	cat <<EOT
+<h4>VIA Rhine based (Rhine-I (VT86C100A), Rhine-II (VT6102), or Rhine-III (VT6105)) Ethernet driver</h4>
+<table>
+<tr>
+<td>Maximum events handled per interrupt</td>
+<td><select name="MAXERHINE">
+EOT
+	for i in $(seq 10 -1 1); do
+	cat <<EOT
+	<option value="$i"$([ "$MAXERHINE" == "$i" ] && echo ' selected="selected"')>$i</option>
+EOT
+	done
+	cat <<EOT
+</select></td>
+</tr>
+<tr>
+<td>Debug</td>
+<td><select name="DBGRHINE">
+EOT
+	for i in $(seq 0 7); do
+	cat <<EOT
+	<option value="$i"$([ "$DBGRHINE" == "$i" ] && echo ' selected="selected"')>$i</option>
+EOT
+	done
+	cat <<EOT
+</select></td>
+</tr>
+</table>
+EOT
+}
