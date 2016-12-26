@@ -117,6 +117,7 @@ genpkg_rules()
     ln rootfs/bin/busybox rootfs/init
     #ln -s var/tmp rootfs/tmp
 
+    sed -i 's/[ \t]*#.*//;s/[ \t] / /g;s/[ \t]\t/\t/g;/^$/d' rootfs/etc/services
     ( cd rootfs ; find | cpio -o -H newc ) > rootfs.cpio
     du -h rootfs.cpio
 
