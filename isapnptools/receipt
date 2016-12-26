@@ -22,6 +22,9 @@ compile_rules()
 		ln -s $i ./$PREFIX-${i#/usr/bin/uclibc-$TARGET-}
 	done
 
+	sed -i 's/pnpdump_main.$(OBJEXT)/isapnp_main.$(OBJEXT) &/' src/Makefile.*
+	sed -i 's/return/if (!strcmp(basename(argv[0]),"isapnp")) return (isapnp_main(argc, argv));\n&/' src/pnpdump.c
+
 	# Let's go !
 	./configure \
 		--host=$PREFIX \
@@ -34,6 +37,8 @@ compile_rules()
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
+	mkdir -p $fs/sbin
 	# move /usr/sbin/* /sbin to use pnptools *before* mounting /usr
-	cp -a $install/usr/sbin $fs
+	cp -a $install/usr/sbin/pnpdump $fs/sbin
+	ln $fs/sbin/pnpdump $fs/sbin/isapnp
 }

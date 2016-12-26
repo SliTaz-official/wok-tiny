@@ -118,6 +118,10 @@ genpkg_rules()
     #ln -s var/tmp rootfs/tmp
 
     sed -i 's/[ \t]*#.*//;s/[ \t] / /g;s/[ \t]\t/\t/g;/^$/d' rootfs/etc/services
+    sed -i '2,$s/^#.*//;/^$/d' rootfs/etc/init.d/rc* rootfs/etc/init.d/daemon \
+	rootfs/etc/init.d/*.sh
+    sed -i 's/^#.*//;/^$/d' rootfs/etc/*.conf rootfs/etc/*tab \
+	rootfs/etc/profile rootfs/etc/securetty rootfs/etc/shells
     ( cd rootfs ; find | cpio -o -H newc ) > rootfs.cpio
     du -h rootfs.cpio
 
