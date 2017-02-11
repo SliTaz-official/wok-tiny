@@ -1,7 +1,7 @@
 # SliTaz package receipt.
 
 PACKAGE="busybox"
-VERSION="1.18.4"
+VERSION="1.26.2"
 CATEGORY="base-system"
 SHORT_DESC="Busybox combines tiny versions of many common UNIX utilities."
 MAINTAINER="pascal.bellard@slitaz.org"
@@ -28,9 +28,16 @@ tar.u
 stat.u
 ris.u
 zmodules.u
-printable.u
 cmdline.u
-conspy.u
+diff.u
+diet.u
+losetup.u
+fbvnc.u
+cpio.u
+ftpd.u
+shutdown.u
+scriptreplay.u
+bug9471.u
 EOT
     cp $stuff/$PACKAGE-${VERSION%.*}.config .config
     var="CONFIG_CROSS_COMPILER_PREFIX"
@@ -122,6 +129,7 @@ genpkg_rules()
 	rootfs/etc/init.d/*.sh
     sed -i 's/^#.*//;/^$/d' rootfs/etc/*.conf rootfs/etc/*tab \
 	rootfs/etc/profile rootfs/etc/securetty rootfs/etc/shells
+    find rootfs -exec touch -r rootfs {} \;
     ( cd rootfs ; find | cpio -o -H newc ) > rootfs.cpio
     du -h rootfs.cpio
 
