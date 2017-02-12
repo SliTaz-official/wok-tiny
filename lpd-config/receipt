@@ -2,7 +2,7 @@
 
 PACKAGE="lpd-config"
 VERSION="1.0"
-CATEGORY="system"
+CATEGORY="meta"
 SHORT_DESC="Line printer server configuration (without spooling)"
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="BSD"
@@ -13,14 +13,14 @@ SUGGESTED="module-lp module-usblp"
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
-	mkdir -p $fs/var/spool $fs/dev
+	mkdir -p $fs/var/spool
 }
 
 config_form()
 {
 	cat <<EOT
 Respective printer names for lp0, lp1 ... 
-<input type="text" name="LP_NAMES" value="$LP_NAMES" >
+<input type="text" name="LP_NAMES" value="${LP_NAMES:-printer}" >
 EOT
 }
 

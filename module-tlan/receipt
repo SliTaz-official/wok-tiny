@@ -34,6 +34,10 @@ post_install()
 
 config_form()
 {
+	if [ -z "$SPEEDTLAN" ]; then
+		AUITLAN=on
+		BIGBUFTLAN=on
+	fi
 	cat <<EOT
 <h4>TI ThunderLAN based ethernet PCI adapter</h4>
 <table>
@@ -54,9 +58,9 @@ config_form()
 </select></td>
 </tr>
 </table>
-<input type="checkbox" name="AUITLAN" value="1" />
+<input type="checkbox" name="AUITLAN" ${AUITLAN:+value="on" }/>
 ThunderLAN use AUI port(s)<br>
-<input type="checkbox" name="BIGBUFTLAN" value="1" />
+<input type="checkbox" name="BIGBUFTLAN" ${BIGBUFTLAN:+value="on" }/>
 ThunderLAN use big buffer<br>
 EOT
 }

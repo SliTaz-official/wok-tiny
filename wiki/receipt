@@ -45,14 +45,12 @@ EOT
 
 config_form()
 {
-	[ -n "$WIKI_PASSWORD"   ] || WIKI_PASSWORD=test
 	cat <<EOT
 <table>
 <tr>
 <td>Wiki password</td>
-<td><input type="text" name="WIKI_PASSWORD" value="$WIKI_PASSWORD" /></td>
+<td><input type="text" name="WIKI_PASSWORD" value="${WIKI_PASSWORD:-test}" /></td>
 </tr>
 </table>
 EOT
 }
-

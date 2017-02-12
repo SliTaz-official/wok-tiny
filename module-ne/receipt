@@ -37,20 +37,24 @@ post_install()
 
 config_form()
 {
+	if [ -n "$IONE2K" ]; then
+		IONE2K=0x300
+		BADNE2K=on
+	fi
 	cat <<EOT
 <h4>NE2000 isa Ethernet driver</h4>
 <table>
 <tr>
 <td>I/O base (required)</td>
-<td><input type="text" name="IONE2K" value="0x300" 
+<td><input type="text" name="IONE2K" ${IONE2K:+value="$IONE2K"}
 title="Likely 0x300 0x280 0x320 0x340 0x360 or 0x380" /></td>
 </tr>
 <tr>
 <td>IRQ (optionnal)</td>
-<td><input type="text" name="IRQNE2K" /></td>
+<td><input type="text" name="IRQNE2K" ${IRQNE2K:+value="$IRQNE2K" }/></td>
 </tr>
 </table>
-<input type="checkbox" name="BADNE2K" value="ON" />
+<input type="checkbox" name="BADNE2K" ${BADNE2K:+value="on" }/>
 Accept card with bad signatures<br>
 EOT
 }

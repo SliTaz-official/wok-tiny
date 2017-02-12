@@ -21,15 +21,17 @@ genpkg_rules()
 
 config_form()
 {
-	[ -n "$PASSWORD"   ] || PASSWORD=root
-	[ -n "$HOSTNAME"   ] || HOSTNAME=slitaz
-	[ -n "$INTERFACE"  ] || INTERFACE=eth0
-	[ -n "$IP"         ] || IP=192.168.0.6
-	[ -n "$NETMASK"    ] || NETMASK=255.255.255.0
-	[ -n "$GATEWAY"    ] || GATEWAY=192.168.0.1
-	[ -n "$DNS_SERVER" ] || DNS_SERVER='192.168.0.1 192.168.0.2'
-	[ -n "$FSTAB"      ] || FSTAB='/dev/hda1       /mnt         ext3    defaults          0       2'
-	[ -n "$RC_LOCAL"   ] || RC_LOCAL='[ -x /mnt/boot/init ] && /mnt/boot/init'
+	if [ -z "$MODE" ]; then
+		[ -n "$PASSWORD"   ] || PASSWORD=root
+		[ -n "$HOSTNAME"   ] || HOSTNAME=slitaz
+		[ -n "$INTERFACE"  ] || INTERFACE=eth0
+		[ -n "$IP"         ] || IP=192.168.0.6
+		[ -n "$NETMASK"    ] || NETMASK=255.255.255.0
+		[ -n "$GATEWAY"    ] || GATEWAY=192.168.0.1
+		[ -n "$DNS_SERVER" ] || DNS_SERVER='192.168.0.1 192.168.0.2'
+		[ -n "$FSTAB"      ] || FSTAB='/dev/hda1       /mnt         ext3    defaults          0       2'
+		[ -n "$RC_LOCAL"   ] || RC_LOCAL='[ -x /mnt/boot/init ] && /mnt/boot/init'
+	fi
 	cat <<EOT
 <table>
 <tr>
@@ -49,7 +51,7 @@ config_form()
 <td><select name="MODE">
 	<option value="STATIC">STATIC</option>
 	<option value="DHCP"$([ "$MODE" == "DHCP" ] && echo ' selected="selected"')>DHCP</option>
-	<option value="DISABLE">DISABLE</option>
+	<option value="DISABLE"$([ "$MODE" == "DISABLE" ] && echo ' selected="selected"')>DHCP</option>
 </select></td>
 </tr>
 <tr>
@@ -81,7 +83,7 @@ $RC_LOCAL
 </textarea></td>
 </tr>
 </table>
-<input type="checkbox" name="KEEP_MODULES" />
+<input type="checkbox" name="KEEP_MODULES" ${KEEP_MODULES:+checked="checked" }/>
 Do not remove the modules files after loading modules.
 EOT
 }

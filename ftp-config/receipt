@@ -18,10 +18,9 @@ genpkg_rules()
 
 config_form()
 {
-	[ "$UPLOAD" == "on" ] && UPLOAD="ckecked=ckecked " || UPLOAD=
 	cat <<EOT
-FTP root <input type="text" name="ROOT" >
-allow upload <input type="checkbox" name="UPLOAD" $UPLOAD>
+FTP root <input type="text" name="ROOT" ${ROOT:+value="$ROOT" }>
+allow upload <input type="checkbox" name="UPLOAD" ${UPLOAD:+checked="checked" }>
 EOT
 }
 

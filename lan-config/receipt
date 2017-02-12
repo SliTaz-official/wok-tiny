@@ -53,9 +53,11 @@ genpkg_rules()
 
 config_form()
 {
-	[ -n "$INTERFACE"  ] || INTERFACE=eth1
-	[ -n "$IP"         ] || IP=192.168.0.6
-	[ -n "$NETMASK"    ] || NETMASK=255.255.255.0
+	if [ -z "$MODE" ]; then
+		INTERFACE=eth1
+		IP=192.168.0.6
+		NETMASK=255.255.255.0
+	fi
 	cat <<EOT
 <table>
 <tr>
@@ -78,7 +80,7 @@ config_form()
 <td><input type="text" name="NETMASK" value="$NETMASK" /></td>
 </tr>
 </table>
-<input type="checkbox" name="ROUTING" value="ON" checked="checked" />
+<input type="checkbox" name="ROUTING" ${ROUTING:+value="ON" checked="checked" }/>
 Enable LAN routing<br>
 EOT
 }

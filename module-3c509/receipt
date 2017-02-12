@@ -41,7 +41,7 @@ config_form()
 <table>
 <tr>
 <td>IRQ</td>
-<td><input type="text" name="IRQ3C509" /></td>
+<td><input type="text" name="IRQ3C509" ${IRQ3C509:+value="$IRQ3C509" } /></td>
 </tr>
 <tr>
 <td>Tranceiver</td>

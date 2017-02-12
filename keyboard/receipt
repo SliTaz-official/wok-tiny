@@ -134,7 +134,7 @@ EOT
 </select></td>
 </tr>
 </table>
-<input type="checkbox" name="USECMDLINE" $([ "$USECMDLINE" == "on" ] && echo "checked=checked ")value="yes">
+<input type="checkbox" name="USECMDLINE" ${USECMDLINE:+checked=checked }value="yes">
 Use the kernel command line arguments <b><i>kmap=</i></b>,
 <b><i>lang=</i></b> and <b><i>tz=</i></b> (+200Kb).
 EOT

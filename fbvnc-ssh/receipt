@@ -18,24 +18,22 @@ genpkg_rules()
 
 config_form()
 {
-	[ "$VNCONLY" == "no" ] || VNCONLY=yes
-	[ -n "$VNCUSER" ] || VNCUSER=tux
 	cat <<EOT
 <table>
 <tr>
 <td>SSH user for the VNC server</td>
-<td><input type="text" name="VNCUSER" value="$VNCUSER"></td>
+<td><input type="text" name="VNCUSER" value="${VNCUSER:+tux}"></td>
 </tr>
 <tr>
 <td>Remove virtual consoles ?</td>
 <td>
 <input type="radio" name="VNCONLY" $([ "$VNCONLY" == "no" ] && echo "checked=checked ")value="no"> keep virtual consoles 3 to 6
-<input type="radio" name="VNCONLY" $([ "$VNCONLY" == "yes" ] && echo "checked=checked ")value="yes"> keep VNC console only
+<input type="radio" name="VNCONLY" $([ "$VNCONLY" != "no" ] && echo "checked=checked ")value="yes"> keep VNC console only
 </td>
 </tr>
 </table>
 <p>
-<input type="checkbox" name="ASKFIRST" checked=checked />
+<input type="checkbox" name="ASKFIRST" ${ASKFIRST:+checked=checked }/>
 Confirm VNC console launch (spare some memory)
 </p>
 <p>

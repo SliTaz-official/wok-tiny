@@ -21,7 +21,7 @@ config_form()
 {
 	cat <<EOT
 Respective printer names for lp0, lp1 ... 
-<input type="text" name="LP_NAMES" value="$LP_NAMES" >
+<input type="text" name="LP_NAMES" value="${LP_NAMES:-printer}" >
 EOT
 }
 

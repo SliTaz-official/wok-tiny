@@ -66,9 +66,9 @@ config_form()
 <table>
 <tr>
 <td>Allowed IRQ for the Ethernet driver cs89x0</td>
-<td><input type="text" name="IRQ_CS89X0_LIST" value="${IRQ_LIST:-15 12 11 10 9 7 6 5 4 3}" /></td>
+<td><input type="text" name="IRQ_CS89X0_LIST" value="${IRQ_CS89X0_LIST:-15 12 11 10 9 7 6 5 4 3}" /></td>
 </tr>
 </table>
-<input type="checkbox" name="CS89X0_WIPEPNP" />Remove PNP binaries after use<br>
+<input type="checkbox" name="CS89X0_WIPEPNP" ${CS89X0_WIPEPNP:+checked="checked" }/>Remove PNP binaries after use<br>
 EOT
 }

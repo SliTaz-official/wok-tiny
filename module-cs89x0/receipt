@@ -42,12 +42,12 @@ config_form()
 <table>
 <tr>
 <td>I/O base</td>
-<td><input type="text" name="IOCS89"
+<td><input type="text" name="IOCS89" ${IOCS89:+value="$IOCS89" }
 title="Likely 0x300 0x320 0x340 0x360 0x200 0x220 0x240 0x260 0x280 0x2a0 0x2c0 or 0x2e0" /></td>
 </tr>
 <tr>
 <td>IRQ</td>
-<td><input type="text" name="IRQCS89" title "Likely 10 11 12 or 5" /></td>
+<td><input type="text" name="IRQCS89" title "Likely 10 11 12 or 5" ${IRQCS89:+value="$IRQCS89" }/></td>
 </tr>
 <tr>
 <td>Media</td>

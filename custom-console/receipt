@@ -79,9 +79,10 @@ Virtual consoles
 EOT
 	for i in $(seq 1 63); do
 		[ $(($i & 7)) -eq 1 ] && echo "<tr>"
+		eval checked="\$TTY$i"
 		cat <<EOT
 <td>
-<input type="checkbox" name="TTY$i" /> tty$i
+<input type="checkbox" name="TTY$i" ${checked:+checked=checked }/> tty$i
 </td>
 EOT
 		[ $(($i & 7)) -eq 0 ] && echo "</tr>"
@@ -95,10 +96,12 @@ Serial consoles
 <table>
 EOT
 	for i in $(seq 0 3 | sed 's/^/TTYS/' ; seq 0 3 | sed 's/^/TTYUSB/'); do
+		eval checked="\$$i"
 		cat <<EOT
 <tr>
-<td><input type="checkbox" name="$i" /> ${i/TTY/tty} </td>
+<td><input type="checkbox" name="$i" ${checked:+checked=checked }/> ${i/TTY/tty} </td>
 EOT
+		eval speed="\$SPEED_$i"
 		for j in 115200 57600 38400 19200 9600 4800 2400 1200 600 300; do
 			[ $j -eq 4800 ] && cat <<EOT
 </tr>
@@ -106,7 +109,9 @@ EOT
 <td></td>
 EOT
 			checked=
-			[ $j -eq 9600 ] && checked="checked=checked "
+			case " ${speed:+9600} " in
+			*\ $j\ *) checked="checked=checked "
+			esac
 			cat <<EOT
 <td><input type="checkbox" name="SPEED_$i[]" value="$j" $checked/> $j</td>
 EOT
@@ -116,7 +121,7 @@ EOT
 </table>
 </tr>
 <p>
-<input type="checkbox" name="ASKFIRST" checked=checked />
+<input type="checkbox" name="ASKFIRST" ${ASKFIRST:+checked=checked }/>
 Confirm console launch (spare some memory)
 </p>
 <p>
@@ -125,14 +130,18 @@ Kernel serial console
 <option>none</option>
 EOT
 	for i in $(seq 0 3); do
-		echo "<option>ttyS$i</option>"
+		echo -n "<option"
+		[ "$KERNEL_TTY" == "ttyS$i" ] && echo -n ' selected="selected"'
+		echo ">ttyS$i</option>"
 	done
 	cat <<EOT
 </select>
 <select name="SPEED_KERNEL_TTY">
 EOT
 	for i in 115200 57600 38400 19200 9600 4800 2400 1200 600 300; do
-		echo "<option>$i</option>"
+		echo -n "<option"
+		[ "$SPEED_KERNEL_TTY" == "$i" ] && echo -n ' selected="selected"'
+		echo ">$i</option>"
 	done
 	echo -e "</select>\n</p>"
 }

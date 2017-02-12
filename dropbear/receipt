@@ -100,7 +100,7 @@ EOT
 	RSAPUB="$(dropbearkey  -y -f /tmp/mkssh$$ | grep ^ssh)"
 	rm -f /tmp/mkssh$$
 	cat <<EOT
-<input type="checkbox" name="STARTDAEMON" value="ON" checked="checked" />
+<input type="checkbox" name="STARTDAEMON" value="ON" ${STARTDAEMON:+checked="checked" }/>
 Start server during boot<br>
 <table>
 <tr>
