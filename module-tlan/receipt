@@ -58,9 +58,9 @@ config_form()
 </select></td>
 </tr>
 </table>
-<input type="checkbox" name="AUITLAN" ${AUITLAN:+value="on" }/>
+<input type="checkbox" name="AUITLAN" ${AUITLAN:+value="on" checked="checked" }/>
 ThunderLAN use AUI port(s)<br>
-<input type="checkbox" name="BIGBUFTLAN" ${BIGBUFTLAN:+value="on" }/>
+<input type="checkbox" name="BIGBUFTLAN" ${BIGBUFTLAN:+value="on" checked="checked" }/>
 ThunderLAN use big buffer<br>
 EOT
 }

@@ -109,7 +109,7 @@ EOT
 <td></td>
 EOT
 			checked=
-			case " ${speed:+9600} " in
+			case " ${speed:-9600} " in
 			*\ $j\ *) checked="checked=checked "
 			esac
 			cat <<EOT

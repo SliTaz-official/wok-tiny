@@ -22,7 +22,7 @@ config_form()
 <table>
 <tr>
 <td>SSH user for the VNC server</td>
-<td><input type="text" name="VNCUSER" value="${VNCUSER:+tux}"></td>
+<td><input type="text" name="VNCUSER" value="${VNCUSER:-tux}"></td>
 </tr>
 <tr>
 <td>Remove virtual consoles ?</td>
