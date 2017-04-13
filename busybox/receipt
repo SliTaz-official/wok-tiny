@@ -39,6 +39,8 @@ shutdown.u
 scriptreplay.u
 bug9471.u
 EOT
+    [ $(. $WOK/linux/receipt; printf "%d%02d%02d" ${VERSION//./ }) -le 20626 ] &&
+	patch -p1 -R < $stuff/0001-mdev-create-devices-from-sys-dev.patch
     cp $stuff/$PACKAGE-${VERSION%.*}.config .config
     var="CONFIG_CROSS_COMPILER_PREFIX"
     sed -i "s/.*$var.*/$var=\"uclibc-$TARGET-\"/" .config
