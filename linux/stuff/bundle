@@ -24,10 +24,10 @@ end()
 }
 
 #install-begin
-	cp $0 $0.sh
-	gzip -9 < bundle.bin | uuencode -m - | \
-		sed -e '/^bundle.bin$/r/dev/stdin' -e '/^bundle.bin*/d' \
-		    -e '/install-begin$/,/install-end$/d' -i $0.sh
+	sed '1,/^bundle.bin$/!d' $0 > $0.sh
+	gzip -9 < bundle.bin | uuencode -m - >> $0.sh
+	sed '1,/^bundle.bin$/d' $0 >> $0.sh
+	sed -i -e '/^bundle.bin$/d' -e '/install-begin$/,/install-end$/d' $0.sh
 	chmod +x $0.sh
 	exit
 #install-end
