@@ -14,6 +14,7 @@ start:
 
 	// patch disk parameter table
 	xorw	%cx, %cx
+	pushw	%cx			// bootloader may want to pull 0
 	movw	$0x78, %bx
 	movw	%cx, %ds
 	ldsw	(%bx), %si	
@@ -26,7 +27,7 @@ start:
 	movb	$63, %es:4-12(%di)
 	movw	%cx, %ds
 	popw	(%bx)
-	movw	%es, 2(%bx)	
+	movw	%es, 2(%bx)
 
 	// data segments setup
 	movw	$0x7C0, %ax
@@ -79,7 +80,7 @@ clock	= 0x46C
 wait:
 wait4key:
 	pushw	%ds
-	movw	$0, %ax
+	xorw	%ax, %ax
 	movw	%ax, %ds
 	movw	$clock, %si
 #define DELAY 5
@@ -144,10 +145,9 @@ doit:
 	jc	menustart
 
 	// scan boot code
-	movw	%bx, %di
+	movw	%bx, %di		// =0x200
 scanboot:
 	incw	%di
-	cmpw	%bx, %di
 	je	found
 	cmpw	$0x5897, -3(%di)	// xchgw %ax, %di; popw	%ax
 	jne	scanboot
@@ -156,6 +156,7 @@ scanboot:
 found:
 	pushw	%ds
 	pushw	%di
+	cli
 	movb	0x1F1(%bx), %al		// setup size
 	pushw	%ss
 	popw	%ds
@@ -224,10 +225,13 @@ chkok:
 
 getsectors:
 	tochs		// %di -> %cx, %dx & %bp=sector max
-return:
 	ret
 #endif
 
+puts:
+	lodsb
+	orb	%al, %al
+	jnz	putcs
 putcr:
 	movb	$10, %al
 putlf:
@@ -238,16 +242,8 @@ putcs:
 	int	$0x10
 	cmpb	$13, %al
 	jz	putlf
-	jc	return
-puts:
-	lodsb
-	orb	%al, %al
-	jnz	putcs
-	jmp	putcr
-#ifndef CHECK_FILES
-return:
+	jnc	puts
 	ret
-#endif
 
 #ifdef CHECK_FILES
 msgok:
