@@ -51,7 +51,7 @@ config_form()
 <td><select name="MODE">
 	<option value="STATIC">STATIC</option>
 	<option value="DHCP"$([ "$MODE" == "DHCP" ] && echo ' selected="selected"')>DHCP</option>
-	<option value="DISABLE"$([ "$MODE" == "DISABLE" ] && echo ' selected="selected"')>DHCP</option>
+	<option value="DISABLE"$([ "$MODE" == "DISABLE" ] && echo ' selected="selected"')>DISABLE</option>
 </select></td>
 </tr>
 <tr>
