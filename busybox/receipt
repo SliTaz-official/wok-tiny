@@ -1,17 +1,18 @@
 # SliTaz package receipt.
 
 PACKAGE="busybox"
-VERSION="1.26.2"
+VERSION="1.28-20170822"
+GIT_TAG="753c4045e4f287fc4b4788afd94f58738a7f04b4"
 CATEGORY="base-system"
 SHORT_DESC="Busybox combines tiny versions of many common UNIX utilities."
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="GPL2"
 [ -n "$TARGET" ] || TARGET="i486"
 DEPENDS="slitaz-base-files"
-BUILD_DEPENDS="bzip2 uclibc-cross-compiler-$TARGET"
+BUILD_DEPENDS="bzip2 uclibc-cross-compiler-$TARGET wget"
 TARBALL="$PACKAGE-$VERSION.tar.bz2"
 WEB_SITE="http://www.busybox.net/"
-WGET_URL="http://www.busybox.net/downloads/$TARBALL"
+WGET_URL="https://git.busybox.net/busybox/snapshot/busybox-$GIT_TAG.tar.bz2"
 CONFIG_FILES="/etc/dnsd.conf /etc/inetd.conf /etc/udhcpd.conf /etc/resolv.conf"
 AUTO_SELECTION="never"
 
@@ -21,27 +22,22 @@ apply_bb_patchs()
     while read file; do
     	[ -f done.$file ] && continue
     	echo "Apply $file..."
-    	patch -p1 < $stuff/$PACKAGE-${VERSION%.*}-$file || return 1
+    	patch -p1 < $stuff/$PACKAGE-git-$file || return 1
 	touch done.$file
     done <<EOT
-tar.u
 stat.u
 ris.u
 zmodules.u
 cmdline.u
-diff.u
-diet.u
-losetup.u
 fbvnc.u
 cpio.u
-ftpd.u
-shutdown.u
 scriptreplay.u
-bug9471.u
+ash.u
 EOT
     [ $(. $WOK/linux/receipt; printf "%d%02d%02d" ${VERSION//./ }) -le 20626 ] &&
+    	echo apply 0001-mdev-create-devices-from-sys-dev.patch &&
 	patch -p1 -R < $stuff/0001-mdev-create-devices-from-sys-dev.patch
-    cp $stuff/$PACKAGE-${VERSION%.*}.config .config
+    cp $stuff/$PACKAGE-git.config .config
     var="CONFIG_CROSS_COMPILER_PREFIX"
     sed -i "s/.*$var.*/$var=\"uclibc-$TARGET-\"/" .config
 }
@@ -137,7 +133,7 @@ genpkg_rules()
 
 	rm -rf $fs/*
 	cp rootfs.cpio $fs
-	cp $stuff/busybox-${VERSION%.*}*config $fs/busybox.config.txt
+	cp $stuff/busybox-git.config $fs/busybox.config.txt
 }
 
 # Force glibc-2.7 reinstall if 2.3.6 still in use.

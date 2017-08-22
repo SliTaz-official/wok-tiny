@@ -1,7 +1,7 @@
 # /etc/inittab: init configuration for SliTaz GNU/Linux.
 # Boot-time system configuration/initialization script.
 #
-::sysinit:/etc/init.d/rcS
+::sysinit:/etc/init.d/rcS 2>&1 | tee /var/log/boot.log
 
 # getty respawn shell invocations for selected ttys.
 tty1::askfirst:getty 38400 tty1

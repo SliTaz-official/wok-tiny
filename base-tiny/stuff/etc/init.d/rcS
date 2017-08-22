@@ -10,11 +10,6 @@
 
 # Set TZ and boot time.
 [ -s /etc/TZ ] && export TZ="$(cat /etc/TZ)"
-[ "$bootdate" ] || bootdate=$(date +%s)
-
-case "$1" in
-
-readonly)
 
 echo "Processing /etc/init.d/rcS..."
 
@@ -80,16 +75,10 @@ fi
 # Remount rootfs rw.
 echo "Remounting rootfs read/write..."
 mount -o remount,rw /
-;;
-
-readwrite)
 
 # Mount filesystems in /etc/fstab.
 echo "Mounting filesystems in fstab..."
 mount -a
-;;
-
-logged)
 
 # Store boot messages to log files.
 dmesg > /var/log/dmesg.log &
@@ -215,29 +204,3 @@ if [  "$MESSAGE" ]; then
 	reset
 	echo -e "\033[1m$MESSAGE\033[0m"
 fi
-
-# Display and log boot time.
-time=$(($(date +%s) - $bootdate))
-echo $time > /var/log/boot-time
-echo "SliTaz boot time: ${time}s"
-;;
-
-*)
-if [ ! -s /dev/shm/boot.log ]; then
-	mount -t devpts devpts /dev/pts
-	mount -t tmpfs tmpfs /dev/shm
-fi
-script -aqc '/etc/init.d/rcS readonly' /dev/shm/boot.log
-mv -f /dev/shm/boot.log /boot.log
-umount /dev/shm
-script -aqc '/etc/init.d/rcS readwrite' /boot.log
-last=.9
-for i in .8 .7 .6 .5 .4 .3 .2 .1 .0 '' ; do
-	mv -f /var/log/boot.log$i /var/log/boot.log$last 2>/dev/null
-	last=$i
-done
-mv -f /boot.log /var/log/boot.log
-script -aqc '/etc/init.d/rcS logged' /var/log/boot.log
-;;
-
-esac

@@ -30,7 +30,6 @@ if [ -s "/etc/TZ" ]; then
 	TZ=`cat /etc/TZ`
 	export TZ
 fi
-ip=$(ifconfig eth0 2> /dev/null | awk '/inet addr/ { print substr($2,6) }')
 case "$TERM" in
-xterm*|rxvt*) echo -ne "\033]0;$(hostname) $(cat /etc/slitaz-release) $ip\007";;
+xterm*|rxvt*) echo -ne "\033]0;$(hostname) $(cat /etc/slitaz-release)\007";;
 esac
