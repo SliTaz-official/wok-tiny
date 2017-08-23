@@ -8,12 +8,12 @@ SHORT_DESC="VNC client in frame buffer within a SSH tunnel."
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="BSD"
 WEB_SITE="http://tiny.slitaz.org/"
-DEPENDS="base-tiny dropbear"
+DEPENDS="base-tiny fbvnc-config dropbear"
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
-	mkdir -p $fs/usr/bin
+	mkdir -p $fs/etc
 }
 
 config_form()

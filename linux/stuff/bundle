@@ -48,16 +48,26 @@ EOT
 	pos=$(($pos+${#2}+1))
 	shift 2
 	free=$((0x1F1 - 2 - $pos - $crc))
-	p=1
 	while [ -n "$2" -a $free -ge ${#2} ]; do
-		s=$((($(stat -c "%s" "$1")+511)/512))
+		echo "$((($(stat -c "%s" "$1")+511)/512)) $1 $2"
+		shift 2
+	done | awk '
+BEGIN { i=0 } { sz[i]=$1; fn[i]=$2; sub(".*"$2,""); me[i++]=$0 }
+END {
+  for (m=0, l=p=1; m<i; m++) {
+    for (s=100000, j=0; j<i; j++) if (!lc[j] && sz[j]<s) s=sz[k=j];
+    f2[m]=fn[k]; s2[m]=s; lc[k]=l; l+=s; l2[m]=p; p+=sz[m]
+  }
+  for (j=0; j<i; j++)
+    print sz[j] " " lc[j] " " fn[j] " " s2[j] " " l2[j] " " f2[j] " " me[j]
+}' |	while read s p file s2 p2 file2 entry ; do
+		[ -z "$SORT_MENU" ] && file2=$file && s2=$s && p=$p2
 		x="$(printf '\\x%02x\\x%02x' $(($p % 256)) $(($p / 256)) )"
-		echo -en "$x$2\0" | ddq bs=1 of="$out" seek=$pos conv=notrunc
-		p=$(($p+$s))
-		pos=$(($pos+2+${#2}+1))
-		cat "$1" /dev/zero | ddq bs=512 count=$s >> "$out"
+		echo -en "$x$entry\0" | ddq bs=1 of="$out" seek=$pos conv=notrunc
+		pos=$(($pos+2+${#entry}+1))
+		cat "$file2" /dev/zero | ddq bs=512 count=$s2 >> "$out"
 		if [ $crc -ne 0 ]; then
-			x=$(cat "$1" /dev/zero | ddq bs=512 count=$s | od -v \
+			x=$(cat "$file" /dev/zero | ddq bs=512 count=$s | od -v \
 			    -t u2 -w2 -An|awk '{i+=$0} END {print (i % 65536)}')
 			x="$(printf '\\x%02x\\x%02x' $(($x % 256)) $(($x / 256)) )"
 			echo -en "$x" | ddq bs=1 of="$out" seek=$pos conv=notrunc
@@ -68,7 +78,6 @@ EOT
 		fi
 		shift 2
 	done
-	[ -n "$2" ] && echo "Warning: skip $@" 1>&2 && exit 1
 elif [ -s "$2" ]; then
 	base_initrd=$((0x00300000))
 	size_initrd=$(stat -c %s "$2")
