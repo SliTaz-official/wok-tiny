@@ -44,7 +44,7 @@ done ; done > /dev/null 2>&1 && rm -f /etc/isapnp.conf.base
 status
 EOT
 	grep -q '^# CONFIG_PRINTK is not set' $1/boot/config &&
-	sed -i '/CS8920/d' $1/etc/init.d/pnp.sh
+	sed -i '/Switching on/d' $1/etc/init.d/pnp.sh
 	grep pnp.sh $1/etc/rcS.conf ||
 	sed -i 's/EARLY_RUN_SCRIPTS="/&pnp.sh /' $1/etc/rcS.conf
 	list=""
