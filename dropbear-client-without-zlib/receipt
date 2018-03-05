@@ -1,20 +1,20 @@
 # SliTaz package receipt.
 
-PACKAGE="dropbear-client"
+PACKAGE="dropbear-client-without-zlib"
 SOURCE="dropbear"
 VERSION="0.53"
 CATEGORY="security"
-SHORT_DESC="Light SSH client."
+SHORT_DESC="Light SSH client without compression support."
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="MIT"
 TARBALL="$SOURCE-$VERSION.tar.gz"
-DEPENDS="libutil zlib"
+DEPENDS="libutil"
 [ -n "$TARGET" ] || TARGET="i486"
-BUILD_DEPENDS="dropbear uclibc-cross-compiler-$TARGET zlib-dev"
+BUILD_DEPENDS="dropbear uclibc-cross-compiler-$TARGET"
 WEB_SITE="http://matt.ucc.asn.au/dropbear/dropbear.html"
 WGET_URL="http://matt.ucc.asn.au/dropbear/releases/$TARBALL"
 CONFIG_FILES="/etc/dropbear /etc/daemons.conf /etc/rcS.conf"
-PROVIDE="ssh scp"
+PROVIDE="ssh scp dropbear-client"
 TAGS="ssh"
 
 # Rules to configure and make the package.
@@ -26,8 +26,11 @@ compile_rules()
 	sed -i  -e 's|/usr/X11R6/bin/xauth|/usr/bin/xauth|' \
 		-e 's|/usr/libexec/sftp-server|/usr/sbin/sftp-server|' \
 		options.h
+	[ -d $WOK/zlib/taz ] || cook zlib
+	ln -s $WOK/zlib/taz/*/fs/usr/lib/* /usr/share/uclibc-cross-compiler-$TARGET/lib/ 2> /dev/null
+	ln -s /usr/include/z*.h /usr/share/uclibc-cross-compiler-$TARGET/include/ 2> /dev/null
 	./configure --prefix=/usr --without-pam --host=$TARGET-pc-linux-gnu \
-		CC=uclibc-$TARGET-cc &&
+		--disable-zlib CC=uclibc-$TARGET-cc &&
 	make PROGRAMS="$DROPBEARS" MULTI=1 &&
 	install -d -m 755 $DESTDIR/usr/bin &&
 	install -m 755 dropbearmulti $DESTDIR/usr/bin/dbclient &&
