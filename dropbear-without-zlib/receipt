@@ -25,6 +25,9 @@ compile_rules()
 	DROPBEARS="dbclient scp"
 	sed -i  -e 's|/usr/X11R6/bin/xauth|/usr/bin/xauth|' \
 		-e 's|/usr/libexec/sftp-server|/usr/sbin/sftp-server|' \
+		-e 's|.*MD5_HMAC.*|/*&*/|' \
+		-e 's|.*_AES128.*|/*&*/|' \
+		-e 's|.*TWOFISH128.*|/*&*/|' \
 		options.h
 	./configure --prefix=/usr --without-pam --host=$TARGET-pc-linux-gnu \
 		--disable-zlib CC=uclibc-$TARGET-cc &&
