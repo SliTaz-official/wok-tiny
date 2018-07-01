@@ -1,0 +1,69 @@
+#!/bin/sh
+
+ddq()
+{
+	dd "$@" 2> /dev/null
+}
+
+word()
+{
+	n=$1; for i in $(seq 1 1 ${2:-2}); do
+		printf '\\\\x%02X' $(($n & 255))
+		n=$(($n >> 8))
+	done | xargs echo -en
+}
+
+store()
+{
+	word $2 "$4" | ddq bs=1 conv=notrunc of="$3" seek=$(($1))
+}
+
+get()
+{
+	echo $(od -j $(($1)) -N ${3:-2} -t u${3:-2} -An "$2")
+}
+
+if which lz4 > /dev/null ; then
+
+# boot + head param
+param=$((514+$(get 0x201 $1 1)))
+ddq if=$1 bs=1 count=$param > /tmp/setup$$
+
+# unlz4 + data
+ddq if=unpacklz4.bin >> /tmp/setup$$
+setupsz=$(get 0x1F1 $1 1)
+ddq if=$1 bs=1 skip=$param count=$(($setupsz*512-$param+512)) | \
+	lz4 -l -12 | ddq bs=4 skip=1 >> /tmp/setup$$
+
+# version string
+word $(get 0x20E $1) >> /tmp/setup$$
+word $setupsz 1 >> /tmp/setup$$
+versionofs=
+version="$(ddq if=$1 bs=1 skip=$((0x200+$(get 0x20E $1))) | strings | sed q)"
+if grep --help 2>&1 | grep -q byte-offset; then
+	versionofs=$(grep -obaF "$version" /tmp/setup$$ | sed 's/:.*//')
+fi
+if [ -z "$versionofs" ]; then
+	versionofs=$(stat -c %s /tmp/setup$$)
+	echo -en "$version\0" >> /tmp/setup$$
+fi
+store 0x20E $(($versionofs-512)) /tmp/setup$$
+
+helpersz=0
+[ -n "$2" ] && helpersz=$(stat -Lc %s "$2")
+newsetupsz=$((($(stat -c %s /tmp/setup$$)+$helpersz-1)/512))
+[ $newsetupsz -lt 4 ] && newsetupsz=4
+store 0x1F1 $newsetupsz /tmp/setup$$ 1
+
+if [ $newsetupsz -lt $setupsz ]; then
+	ddq of=/tmp/setup$$ bs=512 seek=$(($newsetupsz+1)) count=0
+	[ -n "$2" ] && ddq if="$2" bs=1 of=/tmp/setup$$ \
+		seek=$((512 + 512*$newsetupsz - $helpersz))
+	[ -n "$3" ] && [ $(stat -Lc %s "$3") -eq 497 ] &&
+		ddq if="$3" conv=notrunc of=/tmp/setup$$
+	ddq if=$1 bs=512 skip=$((1+$setupsz)) >> /tmp/setup$$
+	cp /tmp/setup$$ $1
+fi
+rm -f /tmp/setup$$
+
+fi

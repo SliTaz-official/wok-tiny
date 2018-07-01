@@ -16,11 +16,17 @@ AUTO_SELECTION="always"
 
 DEPENDS=""
 BUILD_DEPENDS="slitaz-toolchain perl git lzma wget gcc2"
-BUILD_SUGGESTED="advancecomp zopfli"
+BUILD_SUGGESTED="advancecomp zopfli lz4 grep"
 
 case "$TARGET" in
 	i486) SUGGESTED="memtest ipxe";;  # bundle may install a boot menu
 esac
+
+S2bin()
+{
+	cc -o $1.o -Wa,-algms=$1.lst -c $stuff/$1.S
+	objcopy -O binary $1.o $1.bin
+}
 
 # Rules to configure and make the package.
 compile_rules()
@@ -47,23 +53,22 @@ compile_rules()
 	cp $WOK/busybox/source/busybox*/.config $src/config-busybox
 	mkdir $src/slitaz
 	cp $stuff/list_modules.sh $src/slitaz
-	cc -o bootloader.o -Wa,-algms=bootloader.lst -c $stuff/bootloader.S
-	objcopy -O binary bootloader.o bootloader.bin
+	S2bin bootloader
+	S2bin unpacklz4
 
 	sed -i '/config %config:/{NNNps/config %config:/%config:/}' Makefile
 	sed -i 's/^config %config:/config:/' Makefile
 	cp $stuff/linux-$VERSION-slitaz.config .config
 	yes '' | make ARCH=i386 HOSTCC=gcc-2 config
 	make ARCH=i386 CC=gcc-2 HOSTCC=gcc-2 -j 4 bzImage
+	$stuff/pack bzImage
 	grep -q "CONFIG_MODULES=y" .config &&
 	make ARCH=i386 CC=gcc-2 HOSTCC=gcc-2 -j 4 modules &&
 	make ARCH=i386 INSTALL_MOD_PATH=$DESTDIR -j 1 modules_install || true
-	cc -o bundle.o -Wa,-algms=bundle.lst -c $stuff/bundle.S
-	objcopy -O binary bundle.o bundle.bin
+	S2bin bundle
 	cp $stuff/bundle .
 	./bundle
-	cc -o cmdline.o -Wa,-algms=cmdline.lst -c $stuff/cmdline.S
-	objcopy -O binary cmdline.o cmdline.bin
+	S2bin cmdline
 }
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
