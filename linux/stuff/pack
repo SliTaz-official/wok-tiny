@@ -23,6 +23,13 @@ get()
 	echo $(od -j $(($1)) -N ${3:-2} -t u${3:-2} -An "$2")
 }
 
+if [ ! -s "$1" ]; then
+	cat << EOT
+Usage: $0 bzImage [bootsector helper] [bootsector]
+EOT
+	exit 1
+fi
+
 if which lz4 > /dev/null ; then
 
 # boot + head param

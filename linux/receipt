@@ -61,7 +61,6 @@ compile_rules()
 	cp $stuff/linux-$VERSION-slitaz.config .config
 	yes '' | make ARCH=i386 HOSTCC=gcc-2 config
 	make ARCH=i386 CC=gcc-2 HOSTCC=gcc-2 -j 4 bzImage
-	$stuff/pack bzImage
 	grep -q "CONFIG_MODULES=y" .config &&
 	make ARCH=i386 CC=gcc-2 HOSTCC=gcc-2 -j 4 modules &&
 	make ARCH=i386 INSTALL_MOD_PATH=$DESTDIR -j 1 modules_install || true
@@ -78,6 +77,7 @@ genpkg_rules()
 	cp -a $src/arch/i386/boot/bzImage $fs/boot/
 	dd if=$src/bootloader.bin of=$fs/boot/bzImage conv=notrunc
 	dd if=$src/cmdline.bin bs=1 seek=560 of=$fs/boot/bzImage conv=notrunc
+	#( cd $src ; $stuff/pack $fs/boot/bzImage )
 	cp -a $src/System.map $fs/boot/
 	cp -a $src/.config $fs/boot/config
 	cp -a $src/config-busybox $fs/boot

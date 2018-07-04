@@ -19,9 +19,10 @@ start:
 	pushw	%cx			// IP = 0
 	call	packed_moved
 next:
-	popw	%di
-	addw	%di, %si
-	addw	$0x200+start-next, %di
+	popw	%bx
+	//leaw	packed-next(%bx,%si), %si
+	.byte	0x8D,0x70,packed-next
+	leaw	start-next(%bx), %di
 #if LZMA
 	call	unlzma
 #else
@@ -35,8 +36,10 @@ lz4main:
 	lodsl				// get chunkSize
 	//cmpl	$ARCHIVE_MAGICNUMBER, %eax
 	//je	lz4main
+	//lodsw
 	addw	%si, %ax
 	xchgw	%ax, %dx
+	//lodsw
 	jmp	lz4chunk		// %cx = 0
 
 lz4len:					// get length in %cx
@@ -68,8 +71,8 @@ lz4string:
 	lodsw				// get string offset
 	xchgw	%ax, %bx
 	call	lz4len			// get string length
-#if BYTE_RLE
 	add	$4, %cx			// minimum match is 4
+#if BYTE_RLE
 	decw	%bx
 	jz	lz4rle
 # if NEGATIVE_OFFSETS
@@ -86,9 +89,6 @@ lz4string:
 	subw	%bx, %si
 #endif
 	rep movsb %ds:(%si), %es:(%di)	// copy string
-#if !BYTE_RLE
-	movsl %ds:(%si), %es:(%di)	// minimum match is 4
-#endif
 	xchgw	%ax, %si
 
 lz4chunk:				// uncompress chunk
@@ -101,10 +101,13 @@ lz4chunk:				// uncompress chunk
 	jb	lz4string
 #endif
 done:
-	movw	$0x20E, %di
+	movw	$0x000E, %di
 	movsw				// version string
-	movw	$0x1F1, %di
-	movsb				// setup size
+	//movw	%ds, %ax
+	//decw	%ax
+	//movw	%ax, %es
+	//movw	$0x0001, %di
+	//movsb				// setup size
 	retf
 
 #if LZMA
