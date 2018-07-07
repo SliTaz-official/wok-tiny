@@ -5,6 +5,7 @@
 
 #define LZMA		0
 #define HOLE		0x4000
+#define DS_OFS		0x0200
 
 start:
 	cld
@@ -17,12 +18,12 @@ start:
 	rep movsb %ds:(%si), %es:(%di)	// move setup
 	pushw	%cs			// CS
 	pushw	%cx			// IP = 0
+	//pushaw
 	call	packed_moved
 next:
 	popw	%bx
-	//leaw	packed-next(%bx,%si), %si
-	.byte	0x8D,0x70,packed-next
-	leaw	start-next(%bx), %di
+	leaw	DS_OFS+start-next(%bx), %di
+	leaw	DS_OFS+packed-next(%bx,%si), %si
 #if LZMA
 	call	unlzma
 #else
@@ -101,13 +102,11 @@ lz4chunk:				// uncompress chunk
 	jb	lz4string
 #endif
 done:
-	movw	$0x000E, %di
+	movw	$0x020E, %di
 	movsw				// version string
-	//movw	%ds, %ax
-	//decw	%ax
-	//movw	%ax, %es
-	//movw	$0x0001, %di
-	//movsb				// setup size
+	movw	$0x01F1, %di
+	movsb				// setup size
+	//popaw
 	retf
 
 #if LZMA

@@ -1,5 +1,13 @@
 #!/bin/sh
 
+if [ "$1" == "--build" ]; then	#install-begin
+	uuencode -m - < unpacklz4.bin | sed -e '/^unpacklz4\.bin$/r/dev/stdin' \
+		-e '/^unpacklz4\.bin$/d' -i $0
+	cat helper.bin 2>/dev/null | uuencode -m - | sed -e \
+		'/^helper\.bin$/r/dev/stdin' -e '/^helper\.bin$/d' -i $0
+	sed '/install-begin$/,/install-end$/d' -i $0
+	exit
+fi	#install-end
 ddq()
 {
 	dd "$@" 2> /dev/null
@@ -23,12 +31,14 @@ get()
 	echo $(od -j $(($1)) -N ${3:-2} -t u${3:-2} -An "$2")
 }
 
-if [ ! -s "$1" ]; then
-	cat << EOT
-Usage: $0 bzImage [bootsector helper] [bootsector]
+helper()
+{
+uudecode << EOT
+helper.bin
 EOT
-	exit 1
-fi
+}
+
+[ ! -s "$1" ] && echo "Usage: $0 bzImage" && exit 1
 
 if which lz4 > /dev/null ; then
 
@@ -37,7 +47,9 @@ param=$((514+$(get 0x201 $1 1)))
 ddq if=$1 bs=1 count=$param > /tmp/setup$$
 
 # unlz4 + data
-ddq if=unpacklz4.bin >> /tmp/setup$$
+uudecode >> /tmp/setup$$ << EOT
+unpacklz4.bin
+EOT
 setupsz=$(get 0x1F1 $1 1)
 ddq if=$1 bs=1 skip=$param count=$(($setupsz*512-$param+512)) | \
 	lz4 -l -12 | ddq bs=4 skip=1 >> /tmp/setup$$
@@ -45,6 +57,7 @@ ddq if=$1 bs=1 skip=$param count=$(($setupsz*512-$param+512)) | \
 # version string
 word $(get 0x20E $1) >> /tmp/setup$$
 word $setupsz 1 >> /tmp/setup$$
+setupend=$(stat -Lc %s "/tmp/setup$$")
 versionofs=
 version="$(ddq if=$1 bs=1 skip=$((0x200+$(get 0x20E $1))) | strings | sed q)"
 if grep --help 2>&1 | grep -q byte-offset; then
@@ -56,18 +69,18 @@ if [ -z "$versionofs" ]; then
 fi
 store 0x20E $(($versionofs-512)) /tmp/setup$$
 
-helpersz=0
-[ -n "$2" ] && helpersz=$(stat -Lc %s "$2")
+helpersz=$(helper | wc -c)
 newsetupsz=$((($(stat -c %s /tmp/setup$$)+$helpersz-1)/512))
 [ $newsetupsz -lt 4 ] && newsetupsz=4
-store 0x1F1 $newsetupsz /tmp/setup$$ 1
 
 if [ $newsetupsz -lt $setupsz ]; then
-	ddq of=/tmp/setup$$ bs=512 seek=$(($newsetupsz+1)) count=0
-	[ -n "$2" ] && ddq if="$2" bs=1 of=/tmp/setup$$ \
+	while [ $(($setupend + $helpersz)) -gt $((512 + 512*$newsetupsz)) ]; do
+		newsetupsz=$(($newsetupsz+1))
+	done
+#	ddq of=/tmp/setup$$ bs=512 seek=$(($newsetupsz+1)) count=0
+	store 0x1F1 $newsetupsz /tmp/setup$$ 1
+	helper | ddq bs=1 of=/tmp/setup$$ \
 		seek=$((512 + 512*$newsetupsz - $helpersz))
-	[ -n "$3" ] && [ $(stat -Lc %s "$3") -eq 497 ] &&
-		ddq if="$3" conv=notrunc of=/tmp/setup$$
 	ddq if=$1 bs=512 skip=$((1+$setupsz)) >> /tmp/setup$$
 	cp /tmp/setup$$ $1
 fi
