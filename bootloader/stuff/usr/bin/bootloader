@@ -205,7 +205,7 @@ EOT
 	rm -f $bs
 }
 
-if [ "$FORMAT" == "0" ]; then # unsplitted
+if [ "$FORMAT" = "0" ]; then # unsplitted
 	floppyset > $PREFIX
 	exit
 fi

@@ -104,7 +104,7 @@ $PAPSECRETS
 <td>Connection script</td>
 <td><select name="DIALER_SCRIPT">
 	<option value="/etc/ppp/ppp-on-dialer">/etc/ppp/ppp-on-dialer</option>
-	<option value="/etc/ppp/scripts/callback"$([ "$DIALER_SCRIPT" == "/etc/ppp/scripts/callback" ] && 
+	<option value="/etc/ppp/scripts/callback"$([ "$DIALER_SCRIPT" = "/etc/ppp/scripts/callback" ] && 
 	echo ' selected="selected"')>/etc/ppp/scripts/callback</option>
 </select></td>
 </tr>

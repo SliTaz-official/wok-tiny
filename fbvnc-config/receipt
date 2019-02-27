@@ -33,18 +33,18 @@ config_form()
 <tr>
 <td>Autostart</td>
 <td>
-<input type="radio" name="START" $([ "$START" == "no" ] && echo "checked=checked ")value="no"> never
-<input type="radio" name="START" $([ "$START" == "yes" ] && echo "checked=checked ")value="yes"> always
-<input type="radio" name="START" $([ "$START" == "ask" ] && echo "checked=checked ")value="ask"> ask during boot
-<input type="radio" name="START" $([ "$START" == "cmdline" ] && echo "checked=checked ")value="cmdline"> with kernel argument 'fbvnc=<i>server</i>:<i>port</i>'
+<input type="radio" name="START" $([ "$START" = "no" ] && echo "checked=checked ")value="no"> never
+<input type="radio" name="START" $([ "$START" = "yes" ] && echo "checked=checked ")value="yes"> always
+<input type="radio" name="START" $([ "$START" = "ask" ] && echo "checked=checked ")value="ask"> ask during boot
+<input type="radio" name="START" $([ "$START" = "cmdline" ] && echo "checked=checked ")value="cmdline"> with kernel argument 'fbvnc=<i>server</i>:<i>port</i>'
 </td>
 </tr>
 <tr>
 <td>Bits per pixel</td>
 <td>
-<input type="radio" name="BPP" $([ "$BPP" == "8" ] && echo "checked=checked ")value="8"> 8
-<input type="radio" name="BPP" $([ "$BPP" == "16" ] && echo "checked=checked ")value="16"> 16
-<input type="radio" name="BPP" $([ "$BPP" == "32" ] && echo "checked=checked ")value="32"> 32
+<input type="radio" name="BPP" $([ "$BPP" = "8" ] && echo "checked=checked ")value="8"> 8
+<input type="radio" name="BPP" $([ "$BPP" = "16" ] && echo "checked=checked ")value="16"> 16
+<input type="radio" name="BPP" $([ "$BPP" = "32" ] && echo "checked=checked ")value="32"> 32
 </td>
 </tr>
 <tr>

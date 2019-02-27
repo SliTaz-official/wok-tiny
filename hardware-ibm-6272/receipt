@@ -56,7 +56,7 @@ EOT
 	sed -i "s/ IRQ_CS89X0_LIST/${list:- 15 12 11 10}/" $1/etc/init.d/pnp.sh
 	sed -i 's/cs89x0[^ "]* //' $1/etc/rcS.conf
 	sed -i '/rm -f .sbin.*pnp/d' $1/etc/init.d/pnp.sh
-	[ "$CS89X0_WIPEPNP" == "on" ] &&
+	[ "$CS89X0_WIPEPNP" = "on" ] &&
 	echo 'rm -f /sbin/pnpdump /sbin/isapnp /etc/isapnp.conf' >> $1/etc/init.d/pnp.sh
 }
 

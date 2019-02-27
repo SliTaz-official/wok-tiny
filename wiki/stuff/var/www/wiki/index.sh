@@ -45,7 +45,7 @@ cache_auth()
 {
 	local tmp
 	tmp="$(echo $1$(date +%d) | md5sum | cut -c1-8)"
-	[ "$(POST sc)" == "$1" ] && AUTH=$tmp || [ "$AUTH" == "$tmp" ]
+	[ "$(POST sc)" = "$1" ] && AUTH=$tmp || [ "$AUTH" = "$tmp" ]
 }
 
 authentified()
@@ -75,7 +75,7 @@ plugin_call_method()
 		grep -q "^$name()" $i || continue
 		. $i
 		eval $name "$@"
-		[ $? == 0 ] && status=true
+		[ $? = 0 ] && status=true
 	done 2> /tmp/tazwiki$$stderr
 	[ -s /tmp/tazwiki$$stderr ] &&
 		logger -t "httpd/wiki/plugin" < /tmp/tazwiki$$stderr
@@ -152,7 +152,7 @@ if [ -r "$PAGE_txt" -o -n "$action" ]; then
 		CONTENT="$(cat "$PAGE_txt")"
 	fi
 	# Restaurer une page
-	[ -n "$(GET page)" -a -n "$gtime" -a "$(GET restore)" == 1 ] &&
+	[ -n "$(GET page)" -a -n "$gtime" -a "$(GET restore)" = 1 ] &&
 	[ -r "$BACKUP_DIR$PAGE_TITLE/$gtime" ] && 
 	CONTENT="$(cat $BACKUP_DIR$PAGE_TITLE/$gtime)"
 	CONTENT="$(sed -e 's/\$/\&#036;/g' -e 's/\\/\&#092;/g' <<EOT
@@ -461,9 +461,9 @@ fi
 
 # Remplacement dans le template
 RECENT="<a href=\"$urlbase?action=recent\" accesskey=\"3\">$RECENT_CHANGES</a>"
-[ "$action" == "recent" ] && RECENT=$RECENT_CHANGES
+[ "$action" = "recent" ] && RECENT=$RECENT_CHANGES
 HOME="<a href=\"$urlbase?page=$START_PAGE\" accesskey=\"1\">$HOME_BUTTON</a>"
-[ "$PAGE_TITLE" == "$START_PAGE" -a "$action" != "search" ] && HOME=$HOME_BUTTON
+[ "$PAGE_TITLE" = "$START_PAGE" -a "$action" != "search" ] && HOME=$HOME_BUTTON
 HELP="\1<a href=\"$urlbase?page=$HELP_BUTTON\" accesskey=\"2\" rel=\"nofollow\">$HELP_BUTTON</a>\2"
 [ "$action" != "edit" ] && HELP=""
 

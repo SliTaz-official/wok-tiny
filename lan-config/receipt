@@ -68,7 +68,7 @@ config_form()
 <td>LAN Network configuration</td>
 <td><select name="MODE">
 	<option value="STATIC">STATIC</option>
-	<option value="DHCP"$([ "$MODE" == "DHCP" ] && echo ' selected="selected"')>DHCP</option>
+	<option value="DHCP"$([ "$MODE" = "DHCP" ] && echo ' selected="selected"')>DHCP</option>
 </select></td>
 </tr>
 <tr>
@@ -99,7 +99,7 @@ post_install()
 	       -e "s/^LAN_STATIC=.*/LAN_STATIC=\"$STATIC\"/" \
 	       -e "s/^LAN_DHCP=.*/LAN_DHCP=\"$DHCP\"/" \
 	       -e "s/^LAN_IP=.*/LAN_IP=\"$IP\"/" $1/etc/network.conf
-	[ "$ROUTING" == "ON" ] && cat >> $1/etc/init.d/local.sh <<EOT
+	[ "$ROUTING" = "ON" ] && cat >> $1/etc/init.d/local.sh <<EOT
 # Enable IP routing between interfaces
 echo 1 > /proc/sys/net/ipv4/ip_forward
 

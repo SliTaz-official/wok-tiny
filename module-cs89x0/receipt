@@ -53,8 +53,8 @@ title="Likely 0x300 0x320 0x340 0x360 0x200 0x220 0x240 0x260 0x280 0x2a0 0x2c0 
 <td>Media</td>
 <td><select name="MODECS89">
 	<option value="rj45">rj45</option>
-	<option value="bnc"$([ "$MODECS89" == "bnc" ] && echo ' selected="selected"')>bnc</option>
-	<option value="aui"$([ "$MODECS89" == "aui" ] && echo ' selected="selected"')>aui</option>
+	<option value="bnc"$([ "$MODECS89" = "bnc" ] && echo ' selected="selected"')>bnc</option>
+	<option value="aui"$([ "$MODECS89" = "aui" ] && echo ' selected="selected"')>aui</option>
 </select></td>
 </tr>
 <tr>
@@ -63,7 +63,7 @@ title="Likely 0x300 0x320 0x340 0x360 0x200 0x220 0x240 0x260 0x280 0x2a0 0x2c0 
 EOT
 	for i in $(seq 0 6); do
 	cat <<EOT
-	<option value="$i"$([ "$DEBUGCS89" == "$i" ] && echo ' selected="selected"')>$i</option>
+	<option value="$i"$([ "$DEBUGCS89" = "$i" ] && echo ' selected="selected"')>$i</option>
 EOT
 	done
 	cat <<EOT

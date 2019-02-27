@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [ "$1" == "--build" ]; then	#install-begin
+if [ "$1" = "--build" ]; then	#install-begin
 	uuencode -m - < unpacklz4.bin | sed -e '/^unpacklz4\.bin$/r/dev/stdin' \
 		-e '/^unpacklz4\.bin$/d' -i $0
 	cat helper.bin 2>/dev/null | uuencode -m - | sed -e \

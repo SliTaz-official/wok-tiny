@@ -27,7 +27,7 @@ config_form()
 <tr>
 <td>Remove virtual consoles ?</td>
 <td>
-<input type="radio" name="VNCONLY" $([ "$VNCONLY" == "no" ] && echo "checked=checked ")value="no"> keep virtual consoles 3 to 6
+<input type="radio" name="VNCONLY" $([ "$VNCONLY" = "no" ] && echo "checked=checked ")value="no"> keep virtual consoles 3 to 6
 <input type="radio" name="VNCONLY" $([ "$VNCONLY" != "no" ] && echo "checked=checked ")value="yes"> keep VNC console only
 </td>
 </tr>
@@ -61,7 +61,7 @@ post_install()
 
 # From fbvnc-ssh
 EOT
-	[ "$VNCONLY" == "yes" ] &&  cat >> $1/etc/init.d/local.sh <<EOT
+	[ "$VNCONLY" = "yes" ] &&  cat >> $1/etc/init.d/local.sh <<EOT
 sed -i '/^tty[2-9]:.*/d' /etc/inittab
 EOT
 	cat >> $1/etc/init.d/local.sh <<EOT

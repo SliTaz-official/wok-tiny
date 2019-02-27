@@ -45,16 +45,16 @@ config_form()
 <td>Speed</td>
 <td><select name="SPEEDTLAN">
 	<option value="0">default</option>
-	<option value="10"$([ "$SPEEDTLAN" == "10" ] && echo ' selected="selected"')>10 Mb</option>
-	<option value="100"$([ "$SPEEDTLAN" == "100" ] && echo ' selected="selected"')>100 Mb</option>
+	<option value="10"$([ "$SPEEDTLAN" = "10" ] && echo ' selected="selected"')>10 Mb</option>
+	<option value="100"$([ "$SPEEDTLAN" = "100" ] && echo ' selected="selected"')>100 Mb</option>
 </select></td>
 </tr>
 <tr>
 <td>Mode</td>
 <td><select name="DUPLEXTLAN">
 	<option value="0">default</option>
-	<option value="1"$([ "$DUPLEXTLAN" == "1" ] && echo ' selected="selected"')>half duplex</option>
-	<option value="2"$([ "$DUPLEXTLAN" == "2" ] && echo ' selected="selected"')>full duplex</option>
+	<option value="1"$([ "$DUPLEXTLAN" = "1" ] && echo ' selected="selected"')>half duplex</option>
+	<option value="2"$([ "$DUPLEXTLAN" = "2" ] && echo ' selected="selected"')>full duplex</option>
 </select></td>
 </tr>
 </table>

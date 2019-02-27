@@ -47,8 +47,8 @@ config_form()
 <td>Tranceiver</td>
 <td><select name="XCVR3C509">
 	<option value="">default</option>
-	<option value="0"$([ "$XCVR3C509" == "0" ] && echo ' selected="selected"')>internal</option>
-	<option value="1"$([ "$XCVR3C509" == "1" ] && echo ' selected="selected"')>external</option>
+	<option value="0"$([ "$XCVR3C509" = "0" ] && echo ' selected="selected"')>internal</option>
+	<option value="1"$([ "$XCVR3C509" = "1" ] && echo ' selected="selected"')>external</option>
 </select></td>
 </tr>
 <tr>
@@ -57,7 +57,7 @@ config_form()
 EOT
 	for i in $(seq 10 -1 1); do
 	cat <<EOT
-	<option value="$i"$([ "$MAXE3C509" == "$i" ] && echo ' selected="selected"')>$i</option>
+	<option value="$i"$([ "$MAXE3C509" = "$i" ] && echo ' selected="selected"')>$i</option>
 EOT
 	done
 	cat <<EOT
@@ -69,7 +69,7 @@ EOT
 EOT
 	for i in $(seq 0 6); do
 	cat <<EOT
-	<option value="$i"$([ "$DBG3C509" == "$i" ] && echo ' selected="selected"')>$i</option>
+	<option value="$i"$([ "$DBG3C509" = "$i" ] && echo ' selected="selected"')>$i</option>
 EOT
 	done
 	cat <<EOT

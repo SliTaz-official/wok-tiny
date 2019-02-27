@@ -47,7 +47,7 @@ action()
 	secret="admin.secret"
 	if [ -n "$(POST setpass)" ]; then
 		if [ -z "$curpass" ]; then	# unauthorized
-			if [ ! -s $secret -o "$(cat $secret 2> /dev/null)" == \
+			if [ ! -s $secret -o "$(cat $secret 2> /dev/null)" = \
 				  "$(echo $(POST password) | md5sum)" ]; then
 				curpass="$(POST password)"
 			fi

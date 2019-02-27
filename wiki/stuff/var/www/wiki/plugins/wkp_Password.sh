@@ -15,7 +15,7 @@ init()
 		esac
 		hash="$(sed '/{HASHPASSWORD=.*}/!d;s/.*{HASHPASSWORD=\([^}]*\)}.*/\1/;q' <$1)"
 		cookie="pagepass$(pagepass_hash $PWD$PAGE_txt)"
-		[ "$(COOKIE $cookie)" == "$hash" ] && return
+		[ "$(COOKIE $cookie)" = "$hash" ] && return
 		header
 		echo "<script> history.go(-1); </script>"
 		exit 0
@@ -24,9 +24,9 @@ init()
 
 action()
 {
-	[ "$1" == "pagepass" ] || return 1
+	[ "$1" = "pagepass" ] || return 1
 	uri="$SCRIPT_NAME?page=$(POST page)&auth=$(POST auth)"
-	if [ "$(pagepass_hash $(POST pass))" == "$(POST hash)" ]; then
+	if [ "$(pagepass_hash $(POST pass))" = "$(POST hash)" ]; then
 		header  "HTTP/1.0 302 Found" \
 			"location: $uri" \
 			"Set-Cookie: $(POST cookie)=$(POST hash)"

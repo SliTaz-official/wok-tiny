@@ -142,7 +142,7 @@ EOT
 
 post_install()
 {
-	if [ "$USECMDLINE" == "yes" ]; then
+	if [ "$USECMDLINE" = "yes" ]; then
 		mkdir $1/bin
 		cat > $1/bin/loadkmap <<EOT
 #!/bin/sh
@@ -170,18 +170,18 @@ EOT
 		rm -f $1/usr/share/data.cpio.gz
 	fi
 	for i in $1/usr/share/i18n/locales/* ; do
-		[ $i == $1/usr/share/i18n/locales/$LOCALE ] || rm $i
+		[ $i = $1/usr/share/i18n/locales/$LOCALE ] || rm $i
 	done
 	[ -n "$LOCALE" ] && cat > $1/etc/locale.conf <<EOT
 LANG=$LOCALE
 LC_ALL=$LOCALE
 EOT
 	find $1/usr/share/zoneinfo -type f | while read i; do
-		[ $i == $1/usr/share/zoneinfo/$TIMEZONE ] || rm $i
+		[ $i = $1/usr/share/zoneinfo/$TIMEZONE ] || rm $i
 	done
 	rmdir $1/usr/share/zoneinfo/* 2> /dev/null
 	[ -n "$TIMEZONE" ] && echo "$TIMEZONE" > $1/etc/TZ
 	for i in $1/usr/share/kmap/*.kmap ; do
-		[ $i == $1/usr/share/kmap/$KEYBOARD.kmap ] || rm $i
+		[ $i = $1/usr/share/kmap/$KEYBOARD.kmap ] || rm $i
 	done
 }

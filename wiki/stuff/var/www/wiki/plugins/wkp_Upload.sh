@@ -63,7 +63,7 @@ EOT
 		ls pages/data | while read file; do
 			stat -c "%s %n" pages/data/$file
 		done | while read size file; do
-			[ $filesize == $size ] && 
+			[ $filesize = $size ] && 
 			cmp $(FILE file tmpname) $file > /dev/null &&
 			ln -s $(basename $file) pages/data/$n$name && break
 		done

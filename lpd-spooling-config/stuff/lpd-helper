@@ -2,7 +2,7 @@
 
 n=0
 for i in $(ls -tr /var/spool); do
-	[ /var/spool/$i == $PWD ] && break
+	[ /var/spool/$i = $PWD ] && break
 	n=$(($n+1))
 done
 cat ./"$DATAFILE" >/dev/lp$n

@@ -21,7 +21,7 @@ post_install()
 {
 	respawn=respawn
 	[ "$ASKFIRST" ] && respawn=askfirst
-	[ "$KERNEL_TTY" == "none" ] ||
+	[ "$KERNEL_TTY" = "none" ] ||
 	echo -n " console=tty0 console=$KERNEL_TTY,${SPEED_KERNEL_TTY}n8" \
 		>> $1/boot/cmdline
 	TTY_LIST=""
@@ -131,7 +131,7 @@ Kernel serial console
 EOT
 	for i in $(seq 0 3); do
 		echo -n "<option"
-		[ "$KERNEL_TTY" == "ttyS$i" ] && echo -n ' selected="selected"'
+		[ "$KERNEL_TTY" = "ttyS$i" ] && echo -n ' selected="selected"'
 		echo ">ttyS$i</option>"
 	done
 	cat <<EOT
@@ -140,7 +140,7 @@ EOT
 EOT
 	for i in 115200 57600 38400 19200 9600 4800 2400 1200 600 300; do
 		echo -n "<option"
-		[ "$SPEED_KERNEL_TTY" == "$i" ] && echo -n ' selected="selected"'
+		[ "$SPEED_KERNEL_TTY" = "$i" ] && echo -n ' selected="selected"'
 		echo ">$i</option>"
 	done
 	echo -e "</select>\n</p>"
