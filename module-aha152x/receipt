@@ -1,0 +1,117 @@
+# SliTaz package receipt.
+
+PACKAGE="module-aha152x"
+VERSION="2.6.14"
+CATEGORY="base-system"
+GROUP="driver,scsi"
+SHORT_DESC="Kernel module for the Adaptec AHA152X/2825 SCSI driver"
+MAINTAINER="pascal.bellard@slitaz.org"
+LICENSE="GPL"
+WEB_SITE="http://tiny.slitaz.org/"
+WANTED="linux"
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	local path
+	export src=$WOK/$WANTED/source/linux-$VERSION
+	export _pkg=$WOK/$WANTED/install
+	path=lib/modules/$(ls $_pkg/lib/modules)/kernel
+	mkdir -p $fs/$path
+	$src/slitaz/list_modules.sh drivers/scsi/${PACKAGE#*-}* | while read module; do
+		dir=$path/$(dirname $module)
+		[ -d $fs/$dir ] || mkdir -p $fs/$dir
+		cp -a $_pkg/$path/$module $fs/$dir
+	done
+}
+
+onoff() { [ "$1" ] && echo 1 || echo 0; }
+
+# Post install/remove commands for Tazpkg.
+post_install()
+{
+	if !grep -qs "^${PACKAGE#*-}|" $1/modules; then
+		echo -n "${PACKAGE#*-}|io=$AHA152X_IOPORT|irq=$AHA152X_IRQ" >> $1/modules
+		echo -n "|scsiid=$AHA152X_SCSI_ID" >> $1/modules
+		echo -n "|reconnect=$(onoff $AHA152X_RECONNECT)" >> $1/modules
+		echo -n "|parity=$(onoff $AHA152X_RECONNECT)" >> $1/modules
+		echo -n "|sync=$(onoff $AHA152X_SYNC)" >> $1/modules
+		echo -n "|exttrans=$(onoff $AHA152X_EXT_TRANS)" >> $1/modules
+		echo "|delay=$AHA152X_DELAY" >> $1/modules
+	fi
+}
+
+config_form()
+{
+	if [ -z "$AHA152X_IOPORT" ]; then
+		AHA152X_IOPORT=0x340
+		AHA152X_IRQ=11
+		AHA152X_SCSI_ID=7
+		AHA152X_RECONNECT=on
+		AHA152X_PARITY=on
+		AHA152X_SYNCHRONOUS=on
+		AHA152X_DELAY=100
+		AHA152X_EXT_TRANS=
+	fi
+	cat <<EOT
+<h4>Adaptec AHA152X/2825 SCSI driver</h4>
+<table>
+<tr>
+<td>Base io address</td>
+<td><select name="AHA152X_IOPORT">
+EOT
+for i in 0x340 0x140; do
+	echo -n "<option value=\"$i\""
+	[ "$i" = "$AHA152X_IOPORT" ] && echo -n ' selected="selected"'
+	echo ">$i</option>"
+done
+cat <<EOT
+</select></td>
+</tr>
+<tr>
+<td>Interrupt level</td>
+<td><select name="AHA152X_IRQ">
+EOT
+for i in 9 10 11 12; do
+	echo -n "<option value=\"$i\""
+	[ "$i" = "$AHA152X_IRQ" ] && echo -n ' selected="selected"'
+	echo ">$i</option>"
+done
+cat <<EOT
+</select></td>
+</tr>
+<tr>
+<td>SCSI id of controller</td>
+<td><select name="AHA152X_SCSI_ID">
+EOT
+for i in 0 1 2 3 4 5 6 7; do
+	echo -n "<option value=\"$i\""
+	[ "$i" = "$AHA152X_SCSI_ID" ] && echo -n ' selected="selected"'
+	echo ">$i</option>"
+done
+cat <<EOT
+</select></td>
+</tr>
+<tr>
+<td><input type="checkbox" name="AHA152X_RECONNECT" ${AHA152X_RECONNECT:+checked=checked }>
+allow targets to disconnect from the bus</td><td></td>
+</tr>
+<tr>
+<td><input type="checkbox" name="AHA152X_PARITY" ${AHA152X_PARITY:+checked=checked }>
+enable parity checking</td><td></td>
+</tr>
+<tr>
+<td><input type="checkbox" name="AHA152X_SYNCHRONOUS" ${AHA152X_SYNCHRONOUS:+checked=checked }>
+enable synchronous transfers</td><td></td>
+</tr>
+<tr>
+<td><input type="checkbox" name="AHA152X_EXT_TRANS" ${AHA152X_EXT_TRANS:+checked=checked }>
+enable extended translation</td><td></td>
+</tr>
+<tr>
+<td>Bus reset delay</td>
+<td><input type="text" name="AHA152X_DELAY"${AHA152X_DELAY:+ value="$AHA152X_DELAY"}></td>
+</tr>
+</table>
+EOT
+}

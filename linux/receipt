@@ -16,7 +16,8 @@ AUTO_SELECTION="always"
 
 DEPENDS=""
 BUILD_DEPENDS="slitaz-toolchain perl git lzma wget gcc2"
-BUILD_SUGGESTED="advancecomp zopfli lz4 grep"
+BUILD_SUGGESTED="advancecomp zopfli"
+INSTALL_DEPENDS="lz4 grep"
 
 case "$TARGET" in
 	i486) SUGGESTED="memtest ipxe";;  # bundle may install a boot menu
@@ -92,9 +93,8 @@ genpkg_rules()
 post_install()
 {
 	echo "Processing post-install commands..."
-	chroot "$1/" /boot/depmod -a $VERSION-slitaz
 	[ -s $1/boot/cmdline ] && cat $1/boot/cmdline | sed 's/^ *//' | \
-	dd of=$1/boot/bzImage conv=notrunc bs=1 seek=768 count=3072 2> /dev/null
+		dd of=$1/boot/bzImage conv=notrunc bs=1 seek=768 count=3072
 	$1/boot/pack $1/boot/bzImage
 
 	# GRUB stuff.

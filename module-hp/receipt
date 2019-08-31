@@ -1,0 +1,63 @@
+# SliTaz package receipt.
+
+PACKAGE="module-hp"
+VERSION="2.6.14"
+CATEGORY="base-system"
+GROUP="driver,ethernet"
+SHORT_DESC="Kernel module for the HP PC-LAN ISA ethernet driver"
+MAINTAINER="pascal.bellard@slitaz.org"
+LICENSE="GPL"
+WEB_SITE="http://tiny.slitaz.org/"
+WANTED="linux"
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	local path
+	export src=$WOK/$WANTED/source/linux-$VERSION
+	export _pkg=$WOK/$WANTED/install
+	path=lib/modules/$(ls $_pkg/lib/modules)/kernel
+	mkdir -p $fs/$path
+	$src/slitaz/list_modules.sh drivers/net/${PACKAGE#*-}* | while read module; do
+		dir=$path/$(dirname $module)
+		[ -d $fs/$dir ] || mkdir -p $fs/$dir
+		cp -a $_pkg/$path/$module $fs/$dir
+	done
+}
+
+# Post install/remove commands for Tazpkg.
+post_install()
+{
+	[ "$IRQHPLAN" ] && IRQHPLAN="|irq=${IRQHPLAN// /,}"
+	[ "$IOHPLAN" ] && IOHPLAN="|io=${IOHPLAN// /,}"
+	grep -qs "^${PACKAGE#*-}|" $1/modules ||
+	echo "${PACKAGE#*-}${IOHPLAN:-|io=0x300}$IRQHPLAN" >> $1/modules
+}
+
+config_form()
+{
+	if [ -n "$IOHPLAN" ]; then
+		IOHPLAN=0x300
+	fi
+	cat <<EOT
+<h4>HP PC-LAN isa Ethernet driver</h4>
+<table>
+<tr>
+<td>Base io address</td>
+<td><select name="IOHPLAN">
+EOT
+for i in 0x300 0x320 0x340 0x280 0x2C0 0x200 0x240; do
+	echo -n "<option value=\"$i\""
+	[ "$i" = "$IOHPLAN" ] && echo -n ' selected="selected"'
+	echo ">$i</option>"
+done
+cat <<EOT
+</select></td>
+</tr>
+<tr>
+<td>IRQ (optionnal)</td>
+<td><input type="text" name="IRQHPLAN" ${IRQHPLAN:+value="$IRQHPLAN" }/></td>
+</tr>
+</table>
+EOT
+}
