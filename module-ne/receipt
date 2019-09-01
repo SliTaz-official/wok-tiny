@@ -45,9 +45,16 @@ config_form()
 <h4>NE2000 isa Ethernet driver</h4>
 <table>
 <tr>
-<td>I/O base (required)</td>
-<td><input type="text" name="IONE2K" ${IONE2K:+value="$IONE2K"}
-title="Likely 0x300 0x280 0x320 0x340 0x360 or 0x380" /></td>
+<td>Base io address</td>
+<td><select name="IONE2K">
+EOT
+for i in 0x300 0x280 0x320 0x340 0x360 0x380; do
+	echo -n "<option value=\"$i\""
+	[ "$i" = "$IONE2K" ] && echo -n ' selected="selected"'
+	echo ">$i</option>"
+done
+cat <<EOT
+</select></td>
 </tr>
 <tr>
 <td>IRQ (optionnal)</td>

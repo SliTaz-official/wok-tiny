@@ -85,6 +85,7 @@ $RC_LOCAL
 </table>
 <input type="checkbox" name="KEEP_MODULES" ${KEEP_MODULES:+checked="checked" }/>
 Do not remove the modules files after loading modules.
+<input type="hidden" name="LOAD_MODULES" value="$(cat $1/modules)" />
 EOT
 }
 

@@ -56,7 +56,7 @@ EOT
 EOT
 	for i in $(seq 0 7); do
 	cat <<EOT
-	<option value="$i"$([ "$DBGRHINE" = "$i" ] && echo ' selected="selected"')>$i</option>
+	<option value="$i"$([ "$DBGRHINE" = "$i" ] && echo ' selected="selected"')>Level $i</option>
 EOT
 	done
 	cat <<EOT

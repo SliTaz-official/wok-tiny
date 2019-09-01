@@ -41,13 +41,28 @@ config_form()
 <h4>CS89x0 Ethernet driver</h4>
 <table>
 <tr>
-<td>I/O base</td>
-<td><input type="text" name="IOCS89" ${IOCS89:+value="$IOCS89" }
-title="Likely 0x300 0x320 0x340 0x360 0x200 0x220 0x240 0x260 0x280 0x2a0 0x2c0 or 0x2e0" /></td>
+<td>Base io address</td>
+<td><select name="IOCS89">
+EOT
+for i in 0x300 0x320 0x340 0x360 0x200 0x220 0x240 0x260 0x280 0x2a0 0x2c0 0x2e0; do
+	echo -n "<option value=\"$i\""
+	[ "$i" = "$IOCS89" ] && echo -n ' selected="selected"'
+	echo ">$i</option>"
+done
+cat <<EOT
+</select></td>
 </tr>
 <tr>
 <td>IRQ</td>
-<td><input type="text" name="IRQCS89" title "Likely 10 11 12 or 5" ${IRQCS89:+value="$IRQCS89" }/></td>
+<td><select name="IRQCS89">
+EOT
+for i in 10 11 12 5; do
+	echo -n "<option value=\"$i\""
+	[ "$i" = "$IRQCS89" ] && echo -n ' selected="selected"'
+	echo ">$i</option>"
+done
+cat <<EOT
+</select></td>
 </tr>
 <tr>
 <td>Media</td>
@@ -63,7 +78,7 @@ title="Likely 0x300 0x320 0x340 0x360 0x200 0x220 0x240 0x260 0x280 0x2a0 0x2c0 
 EOT
 	for i in $(seq 0 6); do
 	cat <<EOT
-	<option value="$i"$([ "$DEBUGCS89" = "$i" ] && echo ' selected="selected"')>$i</option>
+	<option value="$i"$([ "$DEBUGCS89" = "$i" ] && echo ' selected="selected"')>Level $i</option>
 EOT
 	done
 	cat <<EOT

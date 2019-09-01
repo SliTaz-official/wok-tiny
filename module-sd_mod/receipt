@@ -24,3 +24,10 @@ genpkg_rules()
 		cp -a $_pkg/$path/$module $fs/$dir
 	done
 }
+
+# Post install/remove commands for Tazpkg.
+post_install()
+{
+	grep -qs "^${PACKAGE#*-}|" $1/modules ||
+	echo "${PACKAGE#*-}" >> $1/modules
+}
