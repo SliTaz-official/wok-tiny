@@ -29,6 +29,6 @@ genpkg_rules()
 # Post install/remove commands for Tazpkg.
 post_install()
 {
-	grep -qs "^${PACKAGE#*-}|" $1/modules ||
+	grep -qs "^${PACKAGE#*-}$" $1/modules ||
 	echo "${PACKAGE#*-}" >> $1/modules
 }
