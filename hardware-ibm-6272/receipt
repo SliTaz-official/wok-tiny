@@ -10,7 +10,7 @@ SHORT_DESC="IBM 300GL 6272/6282 (P75-233 ISA/PCI/USB/ETH desktop) hardware suppo
 WEB_SITE="http://www.slitaz.org/"
 
 DEPENDS="isapnptools module-cs89x0"
-SUGGESTED="module-serial module-lp module-floppy module-ide"
+SUGGESTED="module-serial module-lp module-floppy module-ide module-usb-storage module-usblp"
 
 # Post message when installing.
 post_install()

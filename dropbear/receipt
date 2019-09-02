@@ -13,7 +13,7 @@ BUILD_DEPENDS="uclibc-cross-compiler-$TARGET zlib-dev"
 WEB_SITE="http://matt.ucc.asn.au/dropbear/dropbear.html"
 WGET_URL="http://matt.ucc.asn.au/dropbear/releases/$TARBALL"
 CONFIG_FILES="/etc/dropbear /etc/daemons.conf /etc/rcS.conf"
-PROVIDE="ssh"
+PROVIDE="ssh scp dropbear-client"
 TAGS="ssh"
 
 # Rules to configure and make the package.

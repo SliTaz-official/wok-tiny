@@ -14,6 +14,8 @@ WEB_SITE="http://rsync.samba.org/"
 WGET_URL="${WEB_SITE}ftp/$PACKAGE/$TARBALL"
 CONFIG_FILES="/etc/rsyncd.conf /etc/rsyncd.secrets"
 
+SUGGESTED="rsh dropbear-client"
+
 # Rules to configure and make the package.
 compile_rules()
 {

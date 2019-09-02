@@ -10,6 +10,8 @@ LICENSE="GPL2"
 WEB_SITE="http://tiny.slitaz.org/"
 WANTED="linux"
 
+DEPENDS="module-sd_mod"
+
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
