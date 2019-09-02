@@ -41,6 +41,7 @@ genpkg_rules()
 # Pre and post install commands for Tazpkg.
 post_install()
 {
+	echo "$RSH_HOSTS" > $1/root/.rhosts
 	if [ "$STARTRSH" = "ON" ]; then
 		grep -q inetd $1/etc/rcS.conf ||
 		sed -i 's/^RUN_DAEMONS="/&inetd /' $1/etc/rcS.conf
