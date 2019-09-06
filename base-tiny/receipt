@@ -85,7 +85,8 @@ $RC_LOCAL
 </table>
 <input type="checkbox" name="KEEP_MODULES" ${KEEP_MODULES:+checked="checked" }/>
 Do not remove the modules files after loading modules.
-<input type="hidden" name="LOAD_MODULES" value="$(cat $1/modules | xargs)" />
+<p>
+<input type="checkbox" name="STUPID" ${STUPID:+ckecked=ckecked }> read sector by sector (slow, stupid but safe)
 EOT
 }
 
@@ -100,6 +101,26 @@ post_install()
 	DHCP)	DHCP="yes"
 		STATIC="no"
 	esac
+	cat >> $1/boot/mkrootfs.pre_exec <<EOT
+if [ -s modules ]; then
+	while read mod; do
+		sed -i "s/LOAD_MODULES=./&\$mod /" etc/rcS.conf
+	done < modules
+	grep ^LOAD_MODULES= etc/rcS.conf >> etc/packages.conf
+	cp etc/packages.conf boot/packages.conf
+	rm -f modules
+fi
+EOF
+	[ "$STUPID" ] && cat >> $1/boot/mkrootfs.pre_exec <<EOT
+for i in boot/bzImage boot/memtest boot/ipxe; do
+	[ -s \$i ] || continue
+	dd if=\$i bs=512 count=1 | \\
+	sed "s|\$(echo -en '\x64\x66\x8F\x47\x78')|\$(echo -en '\x5E\x5E\x90\x90\x90')|" | \\
+	sed "s|\$(echo -en '\x66\x8F\x47\x78')|\$(echo -en '\x5E\x5E\x90\x90')|" | \\
+	sed "s|\$(echo -en '\x77\x02\xB0\x01')|\$(echo -en '\x90\x90\xB0\x01')|" | \\
+	dd of=\$i conv=notrunc
+done
+EOT
 	sed -i	"s/^KEEP_MODULES=.*/KEEP_MODULES=\"$KEEP_MODULES\"/" \
 			$1/etc/rcS.conf
 	sed -i	-e "s/^DNS_SERVER=.*/DNS_SERVER=\"$DNS_SERVER\"/" \
@@ -135,7 +156,4 @@ EOT
 	[ -n "$RC_LOCAL" ] && dos2unix >> $1/etc/init.d/local.sh <<EOT
 $RC_LOCAL
 EOT
-	[ -s $1/modules ] && for i in $(cat $1/modules ; rm -f $1/modules); do
-		sed -i "s/LOAD_MODULES=./&$i /" $1/etc/rcS.conf
-	done
 }
