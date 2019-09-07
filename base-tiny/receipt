@@ -86,7 +86,8 @@ $RC_LOCAL
 <input type="checkbox" name="KEEP_MODULES" ${KEEP_MODULES:+checked="checked" }/>
 Do not remove the modules files after loading modules.
 <p>
-<input type="checkbox" name="STUPID" ${STUPID:+ckecked=ckecked }> read sector by sector (slow, stupid but safe)
+<input type="checkbox" name="STUPID" ${STUPID:+ckecked="ckecked" }/>
+Read floppy sector by sector instead of track by track (slow, stupid but safe).
 EOT
 }
 

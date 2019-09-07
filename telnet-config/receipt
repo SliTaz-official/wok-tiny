@@ -8,6 +8,7 @@ SHORT_DESC="Enable Telnet server"
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="BSD"
 WEB_SITE="http://tiny.slitaz.org/"
+AUTO_SELECTION="CONFIG_TELNETD"
 DEPENDS="base-tiny"
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
