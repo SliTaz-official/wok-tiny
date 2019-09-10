@@ -40,7 +40,7 @@ ASK_VGA		= -3
 // #define MULTI_INITRD		Russian dolls
 // #define README_SUPPORT
 // #define COUNTER		Show floppy number
-#define LABEL "SliTaz"
+#define LABEL "Tiny"
 
 /* remove from basic features */
 // #define EXE_ONLY		remove floppy code
@@ -274,8 +274,8 @@ cmdget:
 	call	wait4key
 #else
 	int	$0x16
-#endif
 	cbw				# %ah = 0, get keyboard character
+#endif
 	cmpb	$8, %al			# BackSpace ?
 	je	cmdbs
 	movb	%al, (%si)		# store char
@@ -530,8 +530,10 @@ nextdigit:
 
 check_limits:
 	popw	%dx
-        cmpb    %al, %cl		# max sector known ?
-        ja	next_head		#   no -> store it
+        cmpb    %cl, %al		# max sector known ?
+        jbe	next_head		#   no -> store it
+        #.byte	0xd6	# SALC		# sector by sector
+        movb	$0, %al			# sector by sector
 	pushaw
         int     $0x13			# reset controler
 #ifndef NO_OUTPUT
