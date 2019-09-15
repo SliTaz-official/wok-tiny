@@ -36,6 +36,7 @@ if [ ! -s "$1" -a -z "$4" ]; then
 	cat <<EOT
 Usage: $p kernel [initrd] [@]
 or: $p menufile "menu title" file1 "menu entry 1" ...
+or: cat floppy.* > floppyset ; $p floppyset
 EOT
 elif [ -n "$4" ]; then
 	out="$1"
@@ -49,38 +50,36 @@ EOT
 	shift 2
 	free=$((0x1F1 - 2 - $pos - $crc))
 	while [ -n "$2" -a $free -ge ${#2} ]; do
-		echo "$((($(stat -c "%s" "$1")+511)/512)) $1 $2"
+		echo "$((($(stat -Lc "%s" "$1")+511)/512))?$1?$2"
 		shift 2
-	done | awk '
-BEGIN { i=0 } { sz[i]=$1; fn[i]=$2; sub(".*"$2,""); me[i++]=$0 }
-END {
-  for (m=0, l=p=1; m<i; m++) {
-    for (s=100000, j=0; j<i; j++) if (!lc[j] && sz[j]<s) s=sz[k=j];
-    f2[m]=fn[k]; s2[m]=s; lc[k]=l; l+=s; l2[m]=p; p+=sz[m]
-  }
-  for (j=0; j<i; j++)
-    print sz[j] " " lc[j] " " fn[j] " " s2[j] " " l2[j] " " f2[j] " " me[j]
-}' |	while read s p file s2 p2 file2 entry ; do
-		[ -z "$SORT_MENU" ] && file2=$file && s2=$s && p=$p2
+	done | awk -F? 'BEGIN { nxt=1; i=0 }
+{ ofs[i]=$1; nxt+=$1 ; file[i]=$2; name[i]=$3; i++ }
+END { for (j = 0; j < i; j++) { nxt-=ofs[j]
+print nxt " " ofs[j] " " file[j] " " name[j] }}' | \
+	while read p s file name; do
 		x="$(printf '\\x%02x\\x%02x' $(($p % 256)) $(($p / 256)) )"
-		echo -en "$x$entry\0" | ddq bs=1 of="$out" seek=$pos conv=notrunc
-		pos=$(($pos+2+${#entry}+1))
-		cat "$file2" /dev/zero | ddq bs=512 count=$s2 >> "$out"
+		echo -en "$x$name\0" | ddq bs=1 of="$out" seek=$pos conv=notrunc
+		pos=$(($pos+2+${#name}+1))
 		if [ $crc -ne 0 ]; then
-			x=$(cat "$file" /dev/zero | ddq bs=512 count=$s | od -v \
-			    -t u2 -w2 -An|awk '{i+=$0} END {print (i % 65536)}')
-			x="$(printf '\\x%02x\\x%02x' $(($x % 256)) $(($x / 256)) )"
+			x=$(cat "$file" /dev/zero | ddq bs=512 count=$s | \
+			    od -v -t u2 -w2 -An | awk '{i+=$0} \
+						END {print (i % 65536)}')
+			x="$(printf '\\x%02x\\x%02x' $(($x%256)) $(($x/256)) )"
 			echo -en "$x" | ddq bs=1 of="$out" seek=$pos conv=notrunc
 			pos=$(($pos+2))
-			x="$(printf '\\x%02x\\x%02x' $(($s % 256)) $(($s / 256)) )"
+			x="$(printf '\\x%02x\\x%02x' $(($s%256)) $(($s/256)) )"
 			echo -en "$x" | ddq bs=1 of="$out" seek=$pos conv=notrunc
 			pos=$(($pos+2))
 		fi
-		shift 2
+		echo "$file $s"
+	done | awk 'BEGIN { i=0 } { file[i]=$1; size[i]=$2; i++ } 
+		END { while (--i >= 0) print file[i] " " size[i] }' | \
+	while read file size; do
+		cat "$file" /dev/zero | ddq bs=512 count=$size >> "$out"
 	done
 elif [ -s "$2" ]; then
 	base_initrd=$((0x00300000))
-	size_initrd=$(stat -c %s "$2")
+	size_initrd=$(stat -Lc %s "$2")
 	[ $(($base_initrd + $size_initrd)) -gt $((0x1000000)) ] &&
 	base_initrd=$((0x01400000))
 	[ "$3" ] && base_initrd=$(($3))
@@ -95,16 +94,16 @@ else
 		[ $(get $(($menu -3)) "$1" 2) -eq 24937 ] && skip=4 || skip=0
 		ddq bs=1 skip=$menu count=$((0x1F3 - $menu)) if="$1" | \
 		od -v -t u1 -w1 -An | awk -vx=$skip '{
-	if (--skip >= 0) next
+	if (--skip >= 0) next				# crc, len
 	if (--bytes < 0) {
-		if ($1 == 0) {
-			if (mul > 0) {
+		if ($1 == 0) {				# eos
+			if (mul > 0) {			# menu label
 				if (sector == 0) exit
 				skip=x; print sector " " s
 			}
-			s=""; sector=0; mul=1; bytes=2
+			s=""; sector=0; mul=1; bytes=2	# menu title
 		}
-		else { c=sprintf("%c",$1); s=s c }
+		else { c=sprintf("%c",$1); s=s c }	# menu title/label
 	}
 	else { sector += $0*mul; mul *= 256 }
 }' |		while read s name; do
@@ -114,11 +113,12 @@ else
 			if [ $(get $(($s*512 + 0x202)) "$1" 2) -eq 25672 ]; then
 				x=$(get $(($s*512 + 0x21C)) "$1")
 				[ $x -ne 0 ] && x=$(((($cnt+31)/32)*512+$x)) &&
-				cnt=$((($x+15)/16))
+				cnt=$((($x+15)/16))	# initrd
 			fi
 			ddq bs=16 skip=$((32*$s)) count=$cnt if="$1" of="$name"
 			[ $x -ne 0 ] && ddq bs=1 seek=$x count=0 of="$name"
- 			ls -l "$name"
+			printf "S%04X %9d " $s $(($cnt*16))
+ 			ls -l "$name" | cut -c35-
 		done
 	else
 		base_initrd=$(get 0x218 "$1")

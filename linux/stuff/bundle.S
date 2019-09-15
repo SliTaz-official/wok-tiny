@@ -52,29 +52,31 @@ menustartlp:
 	call	putcr
 	movw	%bp, %cx
 menulp:
-	movb	$' ', %bh
+	.macro	entry
+	movb	$' ', %bl
 	lodsw
 	loop	notcur
 	xchgw	%ax, %di
-	movb	$'>', %bh
+	movb	$'>', %bl
 notcur:
-	movb	%bh, %al
-	call	putcs
+	xchgw	%ax, %bx
+	.endm
 #ifdef CHECK_FILES
+	call	putentry
 	lodsw		// CRC16
 	lodsw		// sector count
+#else
+	entry
+	call	putcs
 #endif
 	cmpw	$0, (%si)
 	jne	menulp
 #ifdef CHECK_FILES
-	movw	$msgcrc, %si
-	movb	$' ', %al
-	loop	notcrc
-	movb	$'>', %al
-notcrc:
-	call	putcs
+	movw	$msgcrc-2, %si
+	call	putentry
 #endif
 menustartz:
+	.macro	waitkbdcode
 #ifdef TIMEOUT
 clock	= 0x46C
 wait:
@@ -88,17 +90,24 @@ wait4key:
 waitkbd:
 	movw	$0x10D, %ax		// test keyboard, timeout => CR
 	cmpb	(%si), %ah
+clock_patch:
 	je	waitdone
 	int	$0x16
 	jz	waitkbd
 	cbw
 	int	$0x16			// eat char
-	movw	%si, wait4key+0x7C02	// disable timeout
+	movb	$0xA8, clock_patch+0x7C00	// disable timeout
 waitdone:
 	popw	%ds
 #else
 	xorb	%ax, %ax
 	int	$0x16
+#endif
+	.endm
+#ifdef CHECK_FILES
+	call	wait4kbd
+#else
+	waitkbdcode
 #endif
 	cmpb	$0x0D, %al	// CR ?
 	je	doit
@@ -112,14 +121,32 @@ isitdn:
 	loope	menudown
 	jmp	menustartlp
 
+#ifdef CHECK_FILES
+toeos:
+	lodsb
+	orb	%al, %al
+	jnz	toeos
+	lodsw			// crc, count
+	lodsw
+	cmpw	$0, (%si)
+	jne	nextchk
+	call	wait4kbd
+	jmp	start
+#endif
+
 	.macro	tochs		// %di -> %cx, %dx & %bp=sector max
 	movw	$64, %cx
-	movw	$0x200, %bx
 sectlp:
-	movw	$0x201,	%ax
 	movb	%ch, %dh
 	decw	%cx
+#define BUFFER	0x200
+#ifdef CHECK_FILES
+	call	readsector
+#else
+	movw	$BUFFER, %bx
+	movw	$0x201,	%ax
 	int	$0x13
+#endif
 	jc	sectlp
 	movw	%cx, %bp
 	movw	%di, %ax
@@ -135,29 +162,26 @@ doit:
 #ifdef CHECK_FILES
 	jcxz	docrc
 	call	getsectors
+	call	readsector2
 #else
 	tochs		// %di -> %cx, %dx & %bp=sector max
-#endif
-	pushw	%cx
 	movw	$0x201,	%ax
 	int	$0x13
-	popw	%cx
+#endif
 	jc	menustart
 
 	// scan boot code
-	movw	%bx, %di		// =0x200
 scanboot:
-	incw	%di
-	je	found
-	cmpw	$0x5897, -3(%di)	// xchgw %ax, %di; popw	%ax
+	incw	%bx
+	cmpw	$0x5897, -3(%bx)	// xchgw %ax, %di; popw	%ax
 	jne	scanboot
-	cmpw	$0xE841, -1(%di)	// incw %cx ; call ...
+	cmpw	$0xE841, -1(%bx)	// incw %cx ; call ...
 	jne	scanboot
 found:
 	pushw	%ds
-	pushw	%di
+	pushw	%bx
 	cli
-	movb	0x1F1(%bx), %al		// setup size
+	movb	0x1F1+BUFFER, %al	// setup size
 	pushw	%ss
 	popw	%ds
 	pushw	%ss
@@ -175,29 +199,29 @@ skiptitle:
 	lodsb
 	orb	%al, %al
 	jnz	skiptitle
+nextchklp:
+	pushw	%si		// start of menu
 nextchk:
 	lodsw			// sector offset
-	xchgw	%ax, %di
-	movw	%di, %cx
-	movw	$1, %bp
-	jcxz	menustartz
+	cmpw	%ax, %di	// next sector offset
+	jne	toeos
 	call	puts		// menu entry
-	call	getsectors
+	call	getsectors	// %di -> %cx, %dx & %bp=sector max
 	lodsw
+	addw	(%si), %di
+	pushw	%di		// next sector offset
 	xchgw	%ax, %di	// crc
-	movw	$0x201,	%ax
-	int	$0x13
 	lodsw			// sector count
-	pushw	%si
-	jc	chkfail
 	xchgw	%ax, %si
 chksector:
+	call	readsector
+	jc	chkfail
+chksectorz:
 	subw	(%bx), %di
 	incw	%bx
 	incw	%bx
 	cmpb	$4, %bh
-	jne	chksector
-	movb	$2, %bh
+	jne	chksectorz
 	decw	%si
 	je	chkend
 	movw	%bp, %ax
@@ -208,10 +232,16 @@ chksector:
 	xorb	%cl, %dh
 	jne	rdit
 	incb	%ch
+	cmp	$80, %ch
+	jb	rdit
+	push	%si
+	mov	$msgnext, %si
+	call	puts
+	call	wait4kbd
+	pop	%si
+	mov	$0, %ch
 rdit:
-	movw	$0x201, %ax
-	int	$0x13
-	jnc	chksector
+	jmp	chksector
 chkend:
 	movw	$msgok, %si
 	orw	%di, %di
@@ -220,18 +250,34 @@ chkfail:
 	movw	$msgko, %si
 chkok:
 	call	puts
-	popw	%si
-	jmp	nextchk
+	popw	%di		// next sector offset
+	popw	%si		// start of menu
+	jmp	nextchklp
+
+readsector:
+	movw	$BUFFER, %bx
+readsector2:
+	movw	$0x201,	%ax
+	int	$0x13
+	ret
 
 getsectors:
 	tochs		// %di -> %cx, %dx & %bp=sector max
 	ret
+
+wait4kbd:
+	waitkbdcode
+	ret
+
+putentry:
+	entry
+	jmp	putcs
 #endif
 
 puts:
 	lodsb
-	orb	%al, %al
-	jnz	putcs
+	cmpb	$2, %al
+	jnc	putcs
 putcr:
 	movb	$10, %al
 putlf:
@@ -249,7 +295,8 @@ putcs:
 msgok:
 	.asciz	" OK"
 msgko:
-	.asciz	" Broken"
+	.ascii	" Broken"
+	.word	1			// next sector offset
 msgcrc:	
 	.asciz	"Check media"		// used to detect CHECK_FILES
 #endif
@@ -263,7 +310,12 @@ rootflags:
 syssz:
 	.long	0	// updated by bundle
 ramsize:
+#ifdef CHECK_FILES
+msgnext:
+	.asciz	"Next!"
+#else
 	.ascii	"SliTaz"
+#endif
 //	.word	0
 //vidmode:
 //	.word	0
