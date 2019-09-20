@@ -17,3 +17,10 @@ genpkg_rules()
 	mkdir -p $fs/boot
 	cp $SOURCES_REPOSITORY/$TARBALL $fs/boot/$PACKAGE
 }
+
+# Post install/remove commands for Tazpkg.
+post_install()
+{
+	grep -qs ^memtest $1/boot/bootmenu ||
+	echo "memtest	Memtest,test,mem	Check memory" >> $1/boot/bootmenu
+}

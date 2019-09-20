@@ -17,3 +17,10 @@ genpkg_rules()
 	mkdir -p $fs/boot
 	cp $SOURCES_REPOSITORY/$TARBALL $fs/boot/$PACKAGE
 }
+
+# Post install/remove commands for Tazpkg.
+post_install()
+{
+	grep -qs ^ipxe $1/boot/bootmenu ||
+	echo "ipxe	IPXE,web,zeb,pxe	SliTaz web boot" >> $1/boot/bootmenu
+}

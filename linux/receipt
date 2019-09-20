@@ -20,7 +20,7 @@ BUILD_SUGGESTED="advancecomp zopfli"
 INSTALL_DEPENDS="lz4 grep"
 
 case "$TARGET" in
-	i486) SUGGESTED="memtest ipxe";;  # bundle may install a boot menu
+	i486) SUGGESTED="memtest ipxe plop";;  # bundle may install a boot menu
 esac
 
 S2bin()

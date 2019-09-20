@@ -16,6 +16,15 @@ BUILD_DEPENDS="xz"
 # Rules to configure and make the package.
 compile_rules()
 {
+	while read ofs data name; do
+		echo -en "\x$data" | \
+		dd conv=notrunc of=plpbt.bin bs=1 seek=$((0x$ofs))
+	done <<EOT
+0288	00	videoMode=text
+0295	00	stars=off
+0299	01	font=bios
+029A	00	zoomanimation=off
+EOT
 	cp $stuff/*.S $stuff/pack .
 	for i in bootloader unpack ; do
 		cc -o $i.o -Wa,-a=$i.lst -c $i.S
@@ -31,4 +40,11 @@ genpkg_rules()
 {
 	mkdir -p $fs/boot
 	cp $src/plop $fs/boot/
+}
+
+# Post install/remove commands for Tazpkg.
+post_install()
+{
+	grep -qs ^plop $1/boot/bootmenu ||
+	echo "plop	Plop,boot	Boot manager" >> $1/boot/bootmenu
 }
