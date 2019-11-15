@@ -15,7 +15,7 @@ PATCH="https://www.selenic.com/tiny/2.6.14-tiny1.patch.bz2"
 AUTO_SELECTION="always"
 
 DEPENDS=""
-BUILD_DEPENDS="slitaz-toolchain perl git lzma wget gcc2"
+BUILD_DEPENDS="slitaz-toolchain perl git lzma wget gcc2 upx"
 BUILD_SUGGESTED="advancecomp zopfli"
 INSTALL_DEPENDS="lz4 grep"
 
@@ -59,19 +59,21 @@ compile_rules()
 	S2bin helper
 	S2bin unpacklz4
 	cp $stuff/pack .
-	./pack --build
+	sh ./pack --build
 
 	sed -i '/config %config:/{NNNps/config %config:/%config:/}' Makefile
 	sed -i 's/^config %config:/config:/' Makefile
 	cp $stuff/linux-$VERSION-slitaz.config .config
 	yes '' | make ARCH=i386 HOSTCC=gcc-2 config
 	make ARCH=i386 CC=gcc-2 HOSTCC=gcc-2 -j 4 bzImage
+	which upx 2> /dev/null &&
+	upx --ultra-brute arch/i386/boot/bzImage
 	grep -q "CONFIG_MODULES=y" .config &&
 	make ARCH=i386 CC=gcc-2 HOSTCC=gcc-2 -j 4 modules &&
 	make ARCH=i386 INSTALL_MOD_PATH=$DESTDIR -j 1 modules_install || true
 	S2bin bundle
 	cp $stuff/bundle .
-	./bundle
+	sh ./bundle
 	S2bin cmdline
 }
 
