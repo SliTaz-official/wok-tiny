@@ -11,7 +11,7 @@ WEB_SITE="http://ppp.samba.org/"
 WGET_URL="https://github.com/paulusmack/ppp/archive/$TARBALL"
 [ -n "$TARGET" ] || TARGET="i486"
 BUILD_DEPENDS="wget uclibc-cross-compiler-$TARGET"
-DEPENDS="libdl libgcc_s"
+DEPENDS="libdl libgcc_s busybox-net"
 CONFIG_FILES="/etc/ppp/"
 
 # Rules to configure and make the package.

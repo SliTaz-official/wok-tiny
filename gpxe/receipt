@@ -7,7 +7,7 @@ SHORT_DESC="Forward PXE to Slitaz Web Boot"
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="GPL"
 WEB_SITE="http://boot.slitaz.org/"
-DEPENDS="base-tiny udhcpd-config"
+DEPENDS="base-tiny udhcpd-config busybox-net"
 CONFIG_FILES="/etc/rcS.conf /etc/udhcpd.conf /etc/inetd.conf"
 
 # Rules to configure and make the package.

@@ -1,0 +1,22 @@
+# SliTaz package receipt.
+
+PACKAGE="geninitramfs"
+VERSION="1.0"
+CATEGORY="misc"
+SHORT_DESC="Utility to build /root/rootfs.gz"
+MAINTAINER="pascal.bellard@slitaz.org"
+LICENSE="BSD"
+WEB_SITE="http://tiny.slitaz.org/"
+AUTO_SELECTION="CONFIG_MODULES"
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	mkdir -p $fs/bin
+	cp $stuff/geninitramfs $fs/bin
+}
+
+post_install()
+{
+	sed 's|KEEP_MODULES=.*|KEEP_MODULES="yes"|' -i $1/etc/rcS.conf
+}

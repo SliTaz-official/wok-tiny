@@ -13,20 +13,47 @@ DAEMON=$(which $NAME || echo $NAME)
 eval $(grep -i ^${NAME}_OPTIONS /etc/daemons.conf | sed 's/.*_OPT/OPT/')
 PIDFILE=/var/run/$NAME.pid
 
+active_inetd()
+{
+if grep $DAEMON /etc/inetd.conf | grep -q ^\#; then
+    sed -i "s,^#\(.*$DAEMON.*\)$,\1," /etc/inetd.conf
+    /etc/init.d/inetd stop > /dev/null
+    exec /etc/init.d/inetd start
+else
+    echo "$NAME is already active."
+    exit 1
+fi
+}
+
+inactive_inetd()
+{
+if grep $DAEMON /etc/inetd.conf | grep -q ^\#; then
+    echo "$NAME is not active."
+    exit 1
+else
+    sed -i "s,^.*$DAEMON.*$,#&," /etc/inetd.conf
+    /etc/init.d/inetd stop > /dev/null
+    exec /etc/init.d/inetd start
+fi
+}
+
 case "$1" in
   start)
+    [ $DAEMON != inetd ] &&
+    grep -qs $DAEMON /etc/inetd.conf && active_inetd
     if active_pidfile $PIDFILE $NAME ; then
       echo "$NAME is already running."
       exit 1
     fi
     echo -n "Starting $DESC: $NAME... "
     $DAEMON $OPTIONS 
-    [ -f $PIDFILE ] ||
-    ps ax | grep $NAME | grep -v etc/init | cut -d ' ' -f1 > $PIDFILE
+    [ -f $PIDFILE ] || ps ax | sed "/$NAME/!d;/etc\/init/d;s| .*||" > $PIDFILE
     active_pidfile $PIDFILE $NAME
     status
     ;;
   stop)
+    [ $DAEMON != inetd ] &&
+    grep -qs $DAEMON /etc/inetd.conf && inactive_inetd
     if ! active_pidfile $PIDFILE $NAME ; then
       echo "$NAME is not running."
       exit 1
@@ -36,6 +63,8 @@ case "$1" in
     status
     ;;
   restart)
+    [ $DAEMON != inetd ] &&
+    grep -qs $DAEMON /etc/inetd.conf && exit 0
     if ! active_pidfile $PIDFILE $NAME ; then
       echo "$NAME is not running."
       exit 1
@@ -44,8 +73,7 @@ case "$1" in
     kill `cat $PIDFILE`
     sleep 2
     $DAEMON $OPTIONS
-    [ -f $PIDFILE ] ||
-    ps ax | grep $NAME | grep -v etc/init | cut -d ' ' -f1 > $PIDFILE
+    [ -f $PIDFILE ] || ps ax | sed "/$NAME/!d;/etc\/init/d;s| .*||" > $PIDFILE
     active_pidfile $PIDFILE $NAME
     status
     ;;

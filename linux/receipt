@@ -44,15 +44,12 @@ compile_rules()
 	echo 'obj-y += kstrdup.o' >> mm/Makefile
 	sed -i 's|3.1024|11*256|' arch/i386/boot/compressed/misc.c
 	sed -i 's/O_CREAT/&|O_TRUNC/' init/initramfs.c
-	which advdef 2> /dev/null &&
+	false && which advdef 2> /dev/null &&
 	sed -i 's|gzip)|&\n	advdef -z4 $@|' \
 		usr/Makefile arch/i386/boot/compressed/Makefile
-	which zopfli 2> /dev/null &&
+	false && which zopfli 2> /dev/null &&
 	sed -i 's|gzip -f -9 <|time zopfli --i100 -c|' scripts/Makefile.lib
 
-	[ -s $WOK/busybox/source/busybox*/rootfs.cpio ] || tazwok cook busybox
-	cp $WOK/busybox/source/busybox*/rootfs.cpio $src
-	cp $WOK/busybox/source/busybox*/.config $src/config-busybox
 	mkdir $src/slitaz
 	cp $stuff/list_modules.sh $src/slitaz
 	S2bin bootloader
@@ -63,11 +60,13 @@ compile_rules()
 
 	sed -i '/config %config:/{NNNps/config %config:/%config:/}' Makefile
 	sed -i 's/^config %config:/config:/' Makefile
+	
 	cp $stuff/linux-$VERSION-slitaz.config .config
 	yes '' | make ARCH=i386 HOSTCC=gcc-2 config
 	make ARCH=i386 CC=gcc-2 HOSTCC=gcc-2 -j 4 bzImage
 	which upx 2> /dev/null &&
 	upx --ultra-brute arch/i386/boot/bzImage
+	
 	grep -q "CONFIG_MODULES=y" .config &&
 	make ARCH=i386 CC=gcc-2 HOSTCC=gcc-2 -j 4 modules &&
 	make ARCH=i386 INSTALL_MOD_PATH=$DESTDIR -j 1 modules_install || true
@@ -87,41 +86,13 @@ genpkg_rules()
 	cp -a $src/pack $fs/boot/
 	cp -a $src/System.map $fs/boot/
 	cp -a $src/.config $fs/boot/config
-	cp -a $src/config-busybox $fs/boot
 	cp -a $src/bundle.sh $fs/boot/bundle
 }
 
 # Pre and post install commands for Tazpkg.
 post_install()
 {
-	echo "Processing post-install commands..."
 	[ -s $1/boot/cmdline ] && cat $1/boot/cmdline | sed 's/^ *//' | \
 		dd of=$1/boot/bzImage conv=notrunc bs=1 seek=768 count=3072
 	$1/boot/pack $1/boot/bzImage
-
-	# GRUB stuff.
-	if [ -f "$1/boot/grub/menu.lst" ]; then
-		root_dev=$(sed '/root=/!d;s/.*root=\([^ ]*\).*/\1/' \
-				< $1/boot/grub/menu.lst | head -n 1)
-		grub_dev=$(grep "root (" < $1/boot/grub/menu.lst | head -n 1)
-		# Add new kernel entry in case of upgrade for installed system.
-		grep -q $SOURCE-$VERSION-slitaz $1/boot/grub/menu.lst ||
-		[ -s $1/boot/cmdline ] && cmdline=" $(cat $1/boot/cmdline)"
-		cat >> $1/boot/grub/menu.lst << EOT
-
-title SliTaz GNU/Linux (Kernel $VERSION-slitaz)
-$grub_dev
-kernel /boot/vmlinuz-$VERSION-slitaz root=$root_dev$cmdline
-EOT
-		# Display information message.
-		cat <<EOT
-----
-GRUB is installed, these tree lines must be in your /boot/grub/menu.lst:
-
-title  SliTaz GNU/Linux (Kernel $VERSION-slitaz)
-$grub_dev
-kernel /boot/vmlinuz-$VERSION-slitaz root=$root_dev$cmdline
-----
-EOT
-	fi
 }

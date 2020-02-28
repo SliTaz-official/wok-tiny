@@ -1,7 +1,5 @@
 # SliTaz package receipt.
 
-PACKED_SIZE="60.0K"
-UNPACKED_SIZE="176.0K"
 PACKAGE="module-sg"
 VERSION="2.6.14"
 CATEGORY="base-system"

@@ -1,0 +1,181 @@
+# SliTaz package receipt.
+
+PACKAGE="busybox-net"
+VERSION="1.28-20170822"
+GIT_TAG="753c4045e4f287fc4b4788afd94f58738a7f04b4"
+CATEGORY="base-system"
+SHORT_DESC="Busybox UNIX utilities with many network commands."
+MAINTAINER="pascal.bellard@slitaz.org"
+LICENSE="GPL2"
+[ -n "$TARGET" ] || TARGET="i486"
+DEPENDS="busybox"
+BUILD_DEPENDS="bzip2 uclibc-cross-compiler-$TARGET wget advancecomp"
+TARBALL="busybox-$VERSION.tar.bz2"
+WEB_SITE="http://www.busybox.net/"
+WGET_URL="https://git.busybox.net/busybox/snapshot/busybox-$GIT_TAG.tar.bz2"
+CONFIG_FILES="/etc/dnsd.conf /etc/inetd.conf /etc/udhcpd.conf /etc/resolv.conf \
+/etc/network.conf /etc/inetd.conf"
+
+apply_bb_patchs()
+{
+    cd $src
+    while read file; do
+    	[ -f done.$file ] && continue
+    	echo "Apply $file..."
+    	patch -p1 < $stuff/busybox-git-$file || return 1
+	touch done.$file
+    done <<EOT
+stat.u
+ris.u
+zmodules.u
+cmdline.u
+fbvnc.u
+cpio.u
+scriptreplay.u
+ash.u
+EOT
+    [ $(. $WOK/linux/receipt; printf "%d%02d%02d" ${VERSION//./ }) -le 20626 ] &&
+    	echo apply 0001-mdev-create-devices-from-sys-dev.patch &&
+	patch -p1 -R < $stuff/0001-mdev-create-devices-from-sys-dev.patch
+    [ "$(which advdef)" ] &&
+	sed -i 's|^cmd_gzip.*|& \&\& advdef -z4 $@|' scripts/Makefile.lib
+    cp $stuff/$PACKAGE-git.config .config
+    var="CONFIG_CROSS_COMPILER_PREFIX"
+    sed -i "s/.*$var.*/$var=\"uclibc-$TARGET-\"/" .config
+}
+
+# Rules to configure and make the package.
+compile_rules()
+{
+    { apply_bb_patchs && 
+    make oldconfig &&
+    make &&
+    make install
+    } || return 1
+    echo "Chmod 4755 on busybox binary..."
+    chmod 4755 _install/bin/busybox
+    mkdir -p _install/lib
+    LD_LIBRARY_PATH=/usr/share/uclibc-cross-compiler-$TARGET/lib \
+	uclibc-$TARGET-ldd busybox 2> /dev/null | \
+	awk '/=>/ { print $3 }' | while read file ; do
+	cp -a $file _install/lib
+	while [ -L "$file" ]; do
+		dir="$(dirname $file)/"
+		file="$(readlink $file)"
+		case "$file" in
+		/*) ;;
+		*)  file="$dir$file";;
+		esac
+		cp -a "$file" _install/lib
+	done
+    done
+    chown 0.0 _install/lib/*
+}
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+    mkdir $fs/bin $fs/boot
+    cp -a $src/_install/bin/busybox $fs/bin
+    for i in /bin/sh /bin/login /bin/false /init ; do
+	ln -f $fs/bin/busybox $fs$i
+    done
+    mkdir -p $fs/etc/init.d
+    for i in etc/init.d/network.sh etc/network.conf etc/services etc/networks \
+	etc/inetd.conf etc/host.conf etc/hosts ; do
+	cp -a $WOK/base-tiny/stuff/$i $fs/$i
+    done
+     sed '/hostname/{Nd}' -i etc/init.d/network.sh
+	
+    # Busybox config files.
+    touch $fs/etc/resolv.conf
+    cp $stuff/inetd.conf $fs/etc
+    cp $stuff/daemon $fs/etc/init.d
+    for i in crond dnsd ftpd httpd inetd klogd ntpd syslogd telnetd tftpd \
+	     udhcpd zcip ; do
+	grep -qi config_$i=y $src/.config &&
+	ln -s daemon $fs/etc/init.d/$i
+    done
+    # Udhcpc stuff.
+    mkdir -p $fs/usr/share/udhcpc
+    cp $stuff/udhcp.script $fs/usr/share/udhcpc/default.script
+    chmod +x $fs/usr/share/udhcpc/default.script
+	
+    sed -i '2,$s/^#.*//;/^$/d' $fs/etc/init.d/rc* $fs/etc/init.d/daemon \
+	$fs/etc/init.d/*.sh
+    sed -i 's/^#.*//;/^$/d' $fs/etc/*.conf $fs/etc/*tab \
+	$fs/etc/profile $fs/etc/securetty $fs/etc/shells
+	
+	cp $stuff/busybox-net-git.config $fs/boot/config-busybox
+}
+
+config_form()
+{
+	if [ -z "$MODE" ]; then
+		[ -n "$HOSTNAME"   ] || HOSTNAME=slitaz
+		[ -n "$INTERFACE"  ] || INTERFACE=eth0
+		[ -n "$IP"         ] || IP=192.168.0.6
+		[ -n "$NETMASK"    ] || NETMASK=255.255.255.0
+		[ -n "$GATEWAY"    ] || GATEWAY=192.168.0.1
+		[ -n "$DNS_SERVER" ] || DNS_SERVER='192.168.0.1 192.168.0.2'
+	fi
+	cat <<EOT
+<table>
+<tr>
+<td>Host name</td>
+<td><input type="text" name="HOSTNAME" value="$HOSTNAME" /></td>
+</tr>
+<tr>
+<td>Interface</td>
+<td><input type="text" name="INTERFACE" value="$INTERFACE" /></td>
+</tr>
+<tr>
+<td>Network configuration</td>
+<td><select name="MODE">
+	<option value="STATIC">STATIC</option>
+	<option value="DHCP"$([ "$MODE" = "DHCP" ] && echo ' selected="selected"')>DHCP</option>
+	<option value="DISABLE"$([ "$MODE" = "DISABLE" ] && echo ' selected="selected"')>DISABLE</option>
+</select></td>
+</tr>
+<tr>
+<td>Internet address</td>
+<td><input type="text" name="IP" value="$IP" /></td>
+</tr>
+<tr>
+<td>Netmask</td>
+<td><input type="text" name="NETMASK" value="$NETMASK" /></td>
+</tr>
+<tr>
+<td>Gateway</td>
+<td><input type="text" name="GATEWAY" value="$GATEWAY" /></td>
+</tr>
+<tr>
+<td>DNS server(s)</td>
+<td><input type="text" name="DNS_SERVER" value="$DNS_SERVER" /></td>
+</tr>
+</table>
+EOT
+}
+
+post_install()
+{
+	sed -i 's|local.sh|network.sh &|' $1/etc/rcS.conf
+	chmod 4755 $1/bin/busybox
+	DHCP="no"
+	STATIC="yes"
+	case "$MODE" in
+	"")	return 1;;
+	DISABLE)
+		STATIC="no" ;;
+	DHCP)	DHCP="yes"
+		STATIC="no"
+	esac
+	sed -i	-e "s/^DNS_SERVER=.*/DNS_SERVER=\"$DNS_SERVER\"/" \
+		-e "s/^INTERFACE=.*/INTERFACE=\"$INTERFACE\"/" \
+		-e "s/^NETMASK=.*/NETMASK=\"$NETMASK\"/" \
+		-e "s/^GATEWAY=.*/GATEWAY=\"$GATEWAY\"/" \
+		-e "s/^STATIC=.*/STATIC=\"$STATIC\"/" \
+		-e "s/^DHCP=.*/DHCP=\"$DHCP\"/" \
+		-e "s/^IP=.*/IP=\"$IP\"/" $1/etc/network.conf
+	[ -n "$HOSTNAME" ] && echo $HOSTNAME > $1/etc/hostname
+}

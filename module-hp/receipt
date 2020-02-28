@@ -8,6 +8,7 @@ SHORT_DESC="Kernel module for the HP PC-LAN ISA ethernet driver"
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="GPL"
 WEB_SITE="http://tiny.slitaz.org/"
+DEPENDS="busybox-net"
 WANTED="linux"
 
 # Rules to gen a SliTaz package suitable for Tazpkg.

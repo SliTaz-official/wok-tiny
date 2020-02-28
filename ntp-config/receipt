@@ -8,7 +8,7 @@ MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="BSD"
 WEB_SITE="http://tiny.slitaz.org/"
 AUTO_SELECTION="CONFIG_NTPD"
-DEPENDS="base-tiny"
+DEPENDS="base-tiny busybox-net"
 CONFIG_FILES="/etc/daemons.conf /etc/rcS.conf"
 
 # Rules to gen a SliTaz package suitable for Tazpkg.

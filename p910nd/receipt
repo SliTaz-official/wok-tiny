@@ -11,7 +11,7 @@ WEB_SITE="http://p910nd.sourceforge.net/"
 WGET_URL="$SF_MIRROR/$PACKAGE/$TARBALL"
 [ -n "$TARGET" ] || TARGET="i486"
 BUILD_DEPENDS="uclibc-cross-compiler-$TARGET"
-DEPENDS="base-tiny"
+DEPENDS="base-tiny busybox-net"
 SUGGESTED="module-lp module-usblp"
 CONFIG_FILES="/etc/inetd.conf /etc/rcS.conf"
 

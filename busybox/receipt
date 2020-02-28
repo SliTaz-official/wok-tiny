@@ -8,13 +8,12 @@ SHORT_DESC="Busybox combines tiny versions of many common UNIX utilities."
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="GPL2"
 [ -n "$TARGET" ] || TARGET="i486"
-DEPENDS="slitaz-base-files"
+DEPENDS=""
 BUILD_DEPENDS="bzip2 uclibc-cross-compiler-$TARGET wget"
 TARBALL="$PACKAGE-$VERSION.tar.bz2"
 WEB_SITE="http://www.busybox.net/"
 WGET_URL="https://git.busybox.net/busybox/snapshot/busybox-$GIT_TAG.tar.bz2"
-CONFIG_FILES="/etc/dnsd.conf /etc/inetd.conf /etc/udhcpd.conf /etc/resolv.conf"
-AUTO_SELECTION="never"
+AUTO_SELECTION="always"
 
 apply_bb_patchs()
 {
@@ -52,11 +51,11 @@ compile_rules()
     } || return 1
     echo "Chmod 4755 on busybox binary..."
     chmod 4755 _install/bin/busybox
-    mkdir -p rootfs/lib
+    mkdir -p _install/lib
     LD_LIBRARY_PATH=/usr/share/uclibc-cross-compiler-$TARGET/lib \
 	uclibc-$TARGET-ldd busybox 2> /dev/null | \
 	awk '/=>/ { print $3 }' | while read file ; do
-	cp -a $file rootfs/lib
+	cp -a $file _install/lib
 	while [ -L "$file" ]; do
 		dir="$(dirname $file)/"
 		file="$(readlink $file)"
@@ -64,16 +63,18 @@ compile_rules()
 		/*) ;;
 		*)  file="$dir$file";;
 		esac
-		cp -a "$file" rootfs/lib
+		cp -a "$file" _install/lib
 	done
     done
-    chown 0.0 rootfs/lib/*
+    chown 0.0 _install/lib/*
 }
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
+	mkdir $fs/boot $fs/bin
 	cp -a $WOK/base-tiny/stuff/. $fs/
+    cp -a $src/_install/lib $fs/
     cp -a $src/_install/bin/busybox $fs/bin
     for i in /bin/sh /bin/login /bin/false ; do
 	ln $fs/bin/busybox $fs$i
@@ -82,94 +83,123 @@ genpkg_rules()
     # Busybox config files.
     cp $stuff/busybox.conf $fs/etc
     chmod 600 $fs/etc/busybox.conf
-    #cp $stuff/dnsd.conf $fs/etc
-    #cp $stuff/udhcpd.conf $fs/etc
     touch $fs/etc/resolv.conf
-    cp $stuff/inetd.conf $fs/etc
     cp $stuff/daemon $fs/etc/init.d
-    for i in crond dnsd ftpd httpd inetd klogd ntpd syslogd telnetd tftpd \
-	     udhcpd zcip ; do
+    for i in crond klogd syslogd ; do
 	grep -qi config_$i=y $src/.config &&
 	ln -s daemon $fs/etc/init.d/$i
     done
-    #rm $fs/linuxrc
-    #mkdir -p $fs/etc/modprobe.d
-    # Udhcpc stuff.
-    mkdir -p $fs/usr/share/udhcpc
-    cp $stuff/udhcp.script $fs/usr/share/udhcpc/default.script
-    chmod +x $fs/usr/share/udhcpc/default.script
-    # ZeroConf stuff.
-    #cp $stuff/zcip.script $fs/etc
-    # Httpd stuff.
-    #cp $stuff/httpd_helper.sh $fs/usr/bin
-    #chmod +x $fs/usr/bin/httpd_helper.sh
-    # .desktop stuff
-    mkdir -p $fs/usr/share
-    #cp -a $stuff/applications $fs/usr/share
-    # prepare rootfs.cpio for kernel-* packages
-    mkdir -p $src/rootfs/lib
-    cp -a $fs/. $src/rootfs/.
-    cd $src
-    false &&
-    for i in slitaz-base-files slitaz-boot-scripts ; do
-    	tazpkg get $i
-    	tazpkg extract $i*.tazpkg
-    	cp -a $i*/fs/. rootfs/.
-    	grep -qs ^post_install $i*/receipt || continue
-    	( . $i*/receipt ; post_install rootfs )
-    done
+    sed -i 's|network.sh ||' $fs/etc/rcS.conf
+    sed -i 's|Executing all initialization scripts.*|&\
+	# Set hostname\
+	echo -n "Setting hostname..."\
+	hostname -F /etc/hostname\
+	status\n|' $fs/etc/rcS.conf
+    rm -f $fs/etc/init.d/network.sh $fs/etc/network.conf \
+	$fs/etc/services $fs/etc/networks $fs/etc/inetd.conf \
+	$fs/etc/host.conf $fs/etc/hosts
 	
-    ln rootfs/bin/busybox rootfs/init
-    #ln -s var/tmp rootfs/tmp
+    ln -f $fs/bin/busybox $fs/init
 
-    sed -i 's/[ \t]*#.*//;s/[ \t] / /g;s/[ \t]\t/\t/g;/^$/d' rootfs/etc/services
-    sed -i '2,$s/^#.*//;/^$/d' rootfs/etc/init.d/rc* rootfs/etc/init.d/daemon \
-	rootfs/etc/init.d/*.sh
-    sed -i 's/^#.*//;/^$/d' rootfs/etc/*.conf rootfs/etc/*tab \
-	rootfs/etc/profile rootfs/etc/securetty rootfs/etc/shells
-    find rootfs -exec touch -r rootfs {} \;
-    ( cd rootfs ; find | cpio -o -H newc ) > rootfs.cpio
-    du -h rootfs.cpio
-
-	rm -rf $fs/*
-	cp rootfs.cpio $fs
-	cp $stuff/busybox-git.config $fs/busybox.config.txt
+    sed -i '2,$s/^#.*//;/^$/d' $fs/etc/init.d/rc* $fs/etc/init.d/daemon \
+	$fs/etc/init.d/*.sh
+    sed -i 's/^#.*//;/^$/d' $fs/etc/*.conf $fs/etc/*tab \
+	$fs/etc/profile $fs/etc/securetty $fs/etc/shells
+    find $fs -exec touch -r $fs {} \;
+	cp $stuff/busybox-git.config $fs/boot/config-busybox
 }
 
-# Force glibc-2.7 reinstall if 2.3.6 still in use.
-pre_install()
+config_form()
 {
-	local i
-	cp -a /etc/resolv.conf /etc/resolv.conf-busybox-install
-	answer=""
-	for i in $(cat $1$INSTALLED/$PACKAGE/files.list); do
-		[ -f $1$i ] || continue
-		case "$i" in
-		/bin/busybox) continue ;;
-		*bin/*) ;;
-		*) continue ;;
-		esac
-		if [ -z "$answer" ]; then
-			echo -n "Keep installed GNU utilities ? "
-			read -t 30 answer	# by default: keep
-			case "$answer" in
-			n*|N*) break;;
-			*) answer="Y";;
-			esac
-		fi
-		cp -a $1$i $1$i-busybox-install
-	done
+	if [ -z "$BBCONF" ]; then
+		[ -n "$PASSWORD"   ] || PASSWORD=root
+		[ -n "$BBHOST"     ] || BBHOST=slitaz
+		[ -n "$FSTAB"      ] || FSTAB='/dev/hda1       /mnt         ext3    defaults          0       2'
+		[ -n "$RC_LOCAL"   ] || RC_LOCAL='[ -x /mnt/boot/init ] && /mnt/boot/init'
+	fi
+	cat <<EOT
+<input type="hidden" name="BBCONF" value="done" />
+<table>
+<tr>
+<td>Root password (empty=disable)</td>
+<td><input type="text" name="PASSWORD" value="$PASSWORD" /></td>
+</tr>
+<tr>
+<td>Host name</td>
+<td><input type="text" name="BBHOST" value="$BBHOST" /></td>
+</tr>
+<tr>
+<td>Filesystems</td>
+<td><textarea name="FSTAB" cols="60" wrap="off">
+$FSTAB
+</textarea></td>
+</tr>
+<tr>
+<td>Additional boot commands</td>
+<td><textarea name="RC_LOCAL" cols="60" wrap="off">
+$RC_LOCAL
+</textarea></td>
+</tr>
+</table>
+<input type="checkbox" name="KEEP_MODULES" ${KEEP_MODULES:+checked="checked" }/>
+Do not remove the modules files after loading modules.
+<p>
+<input type="checkbox" name="STUPID" ${STUPID:+ckecked="ckecked" }/>
+Read floppy sector by sector instead of track by track (slow, stupid but safe).
+EOT
 }
 
 post_install()
 {
-	local i
-	[ -f /etc/resolv.conf-busybox-install ] &&
-	mv -f /etc/resolv.conf-busybox-install /etc/resolv.conf
-	while read i ; do
-		[ -f $1$i-busybox-install ] || continue
-		mv $1$i-busybox-install $1$i
-	done < $1$INSTALLED/$PACKAGE/files.list
 	chmod 4755 $1/bin/busybox
-	sed -i "s@vcsa2txt.*\$@busybox conspy -d | sed 's/ *\$//;/^\$/d;/^Processi\\\\|^.witchi/,\$!d' > /var/log/boot.log@" $1/etc/init.d/rcS
+	cat >> $1/boot/mkrootfs.pre_exec <<EOT
+if [ -s modules ]; then
+	while read mod; do
+		sed -i "s/LOAD_MODULES=./&\$mod /" etc/rcS.conf
+	done < modules
+	grep ^LOAD_MODULES= etc/rcS.conf >> etc/packages.conf
+	cp etc/packages.conf boot/packages.conf
+	rm -f modules
+fi
+EOT
+	[ "$STUPID" ] && cat >> $1/boot/mkrootfs.pre_exec <<EOT
+for i in boot/bzImage boot/memtest boot/ipxe; do
+	[ -s \$i ] || continue
+	dd if=\$i bs=512 count=1 | \\
+	sed "s|\$(echo -en '\x64\x66\x8F\x47\x78')|\$(echo -en '\x5E\x5E\x90\x90\x90')|" | \\
+	sed "s|\$(echo -en '\x66\x8F\x47\x78')|\$(echo -en '\x5E\x5E\x90\x90')|" | \\
+	sed "s|\$(echo -en '\x77\x02\xB0\x01')|\$(echo -en '\x90\x90\xB0\x01')|" | \\
+	sed "s|\$(echo -en '\x98\xCD\x13')|\$(echo -en '\x89\x90\x90')|" | \\
+	sed "s|\$(echo -en '\x60\xCD\x13')|\$(echo -en '\x60\x90\x90')|" | \\
+	sed "s|\$(echo -en '\xB0\x31\x1C\x03\xB4\x0E')|\$(echo -en '\xB0\x31\x14\xFD\xB4\x0E')|" | \\
+	dd of=\$i conv=notrunc
+done
+EOT
+	sed -i	"s/^KEEP_MODULES=\"\"/KEEP_MODULES=\"$KEEP_MODULES\"/" \
+			$1/etc/rcS.conf
+	if [ -n "$PASSWORD" ]; then
+		case "$PASSWORD" in
+		\$1\$*)
+			sed -i "s|^root:[^:]*|root:$PASSWORD|" $1/etc/shadow ;;
+		*)
+			mkdir $1/fs
+			cp -a $1/bin $1/lib $1/etc $1/fs
+			echo "root:$PASSWORD" | chroot $1/fs/ busybox chpasswd -m
+			cp $1/fs/etc/passwd $1/etc/
+			rm -rf $1/fs
+		esac
+	else
+		sed -i 's/^root:[^:]*:/root::/' $1/etc/passwd
+		mkdir $1/root 2> /dev/null
+		cat > $1/root/.profile <<EOT
+grep -qs ^root:: /etc/passwd /etc/shadow && passwd
+EOT
+	fi
+	[ -n "$HOSTNAME" ] && echo $HOSTNAME > $1/etc/hostname
+	[ -n "$FSTAB" ] && dos2unix >> $1/etc/fstab <<EOT
+$FSTAB
+EOT
+	[ -n "$RC_LOCAL" ] && dos2unix >> $1/etc/init.d/local.sh <<EOT
+$RC_LOCAL
+EOT
 }

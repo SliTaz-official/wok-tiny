@@ -1,0 +1,29 @@
+#!/bin/sh
+
+mkdir -p /boot/fs$$/bin /boot/fs$$/lib /boot/fs$$/proc /boot/fs$$/mnt
+cp -a /lib/modules /boot/fs$$/lib
+cp -a /bin/busybox /boot/fs$$/bin
+ln /boot/fs$$/bin/busybox /boot/fs$$/bin/sh
+cp -a /lib/ld* /lib/libc.so* /lib/libuClibc* /lib/libcrypt* /boot/fs$$/lib
+sed -i 's|^LOAD_MODULES=.*|# &|' /etc/rcS.conf
+sed '/LOAD_MODULES/!d;s|^# ||' /etc/rcS.conf > /boot/fs$$/vars
+. /boot/fs$$/vars
+rm -f /boot/fs$$/vars
+cat > /boot/fs$$/init <<EOT
+#!/bin/sh
+
+mount -t proc /proc /proc
+echo -n "Loading modules..."
+for mod in $LOAD_MODULES; do
+	echo -n " \${mod%%|*}"
+	modprobe \${mod//|/ }
+done
+echo
+mount \$(blkid | sed "/\$root/!d;s|: .*||") /mnt
+umount /proc
+switch_root /mnt /init
+EOT
+chmod 755 /boot/fs$$/init
+( cd /boot/fs$$ ; find * | cpio -o -H newc ) | gzip -9 > /boot/rootfs.gz
+rm -rf /boot/fs$$
+ls -l /boot/rootfs.gz

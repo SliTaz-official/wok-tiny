@@ -8,6 +8,7 @@ SHORT_DESC="Kernel module for the 3c509 (3com Etherlink III) driver"
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="GPL2"
 WEB_SITE="http://tiny.slitaz.org/"
+DEPENDS="busybox-net"
 WANTED="linux"
 
 # Rules to gen a SliTaz package suitable for Tazpkg.

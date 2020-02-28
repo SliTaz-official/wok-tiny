@@ -10,6 +10,7 @@ TARBALL="$PACKAGE-$VERSION.tar.bz2"
 WEB_SITE="https://github.com/zohead/fbvnc"
 WGET_URL="git|git://github.com/zohead/fbvnc.git"
 [ -n "$TARGET" ] || TARGET="i486"
+DEPENDS="busybox-net"
 BUILD_DEPENDS="uclibc-cross-compiler-$TARGET bzip2 git"
 DEPENDS="fbvnc-config"
 

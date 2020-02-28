@@ -11,7 +11,7 @@ TARBALL="netkit-$PACKAGE-$VERSION.tar.gz"
 WEB_SITE="http://ftp.linux.org.uk/pub/linux/Networking/netkit/"
 WGET_URL="http://ibiblio.org/pub/linux/system/network/netkit/$TARBALL"
 
-DEPENDS="libcrypt libutil"
+DEPENDS="libcrypt libutil busybox-net"
 BUILD_DEPENDS="ncurses-dev"
 
 # Rules to configure and make the package.
