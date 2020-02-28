@@ -1,10 +1,10 @@
 #!/bin/sh
 
 mkdir -p /boot/fs$$/bin /boot/fs$$/lib /boot/fs$$/proc /boot/fs$$/mnt
-cp -a /lib/modules /boot/fs$$/lib
-cp -a /bin/busybox /boot/fs$$/bin
+cp -dpR /lib/modules /boot/fs$$/lib
+cp -p /bin/busybox /boot/fs$$/bin
 ln /boot/fs$$/bin/busybox /boot/fs$$/bin/sh
-cp -a /lib/ld* /lib/libc.so* /lib/libuClibc* /lib/libcrypt* /boot/fs$$/lib
+cp -d /lib/ld* /lib/libc.so* /lib/libuClibc* /lib/libcrypt* /boot/fs$$/lib
 sed -i 's|^LOAD_MODULES=.*|# &|' /etc/rcS.conf
 sed '/LOAD_MODULES/!d;s|^# ||' /etc/rcS.conf > /boot/fs$$/vars
 . /boot/fs$$/vars
@@ -19,7 +19,7 @@ for mod in $LOAD_MODULES; do
 	modprobe \${mod//|/ }
 done
 echo
-mount \$(blkid | sed "/\$root/!d;s|: .*||") /mnt
+mount \$(blkid | sed "/${1:-\$root}/!d;s|: .*||") /mnt
 umount /proc
 switch_root /mnt /init
 EOT

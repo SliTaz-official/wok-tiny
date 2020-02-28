@@ -7,7 +7,6 @@ SHORT_DESC="Utility to build /root/rootfs.gz"
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="BSD"
 WEB_SITE="http://tiny.slitaz.org/"
-DEPENDS="busybox-net"	# sed
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()

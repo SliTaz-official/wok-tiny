@@ -90,11 +90,9 @@ genpkg_rules()
 	ln -s daemon $fs/etc/init.d/$i
     done
     sed -i 's|network.sh ||' $fs/etc/rcS.conf
-    sed -i 's|Executing all initialization scripts.*|&\
-	# Set hostname\
-	echo -n "Setting hostname..."\
-	hostname -F /etc/hostname\
-	status\n|' $fs/etc/init.d/rcS
+    sed -i 's|.*Executing all initialization scripts|echo -n "Setting hostname..."\
+hostname -F /etc/hostname\
+status\n&|' $fs/etc/init.d/rcS
     rm -f $fs/etc/init.d/network.sh $fs/etc/network.conf \
 	$fs/etc/services $fs/etc/networks $fs/etc/inetd.conf \
 	$fs/etc/host.conf $fs/etc/hosts
@@ -111,14 +109,13 @@ genpkg_rules()
 
 config_form()
 {
-	if [ -z "$BBCONF" ]; then
+	if [ -z "$BBHOST" ]; then
 		[ -n "$PASSWORD"   ] || PASSWORD=root
 		[ -n "$BBHOST"     ] || BBHOST=slitaz
 		[ -n "$FSTAB"      ] || FSTAB='/dev/hda1       /mnt         ext3    defaults          0       2'
 		[ -n "$RC_LOCAL"   ] || RC_LOCAL='[ -x /mnt/boot/init ] && /mnt/boot/init'
 	fi
 	cat <<EOT
-<input type="hidden" name="BBCONF" value="done" />
 <table>
 <tr>
 <td>Root password (empty=disable)</td>
@@ -195,7 +192,7 @@ EOT
 grep -qs ^root:: /etc/passwd /etc/shadow && passwd
 EOT
 	fi
-	[ -n "$HOSTNAME" ] && echo $HOSTNAME > $1/etc/hostname
+	[ -n "$BBHOST" ] && echo $BBHOST > $1/etc/hostname
 	[ -n "$FSTAB" ] && dos2unix >> $1/etc/fstab <<EOT
 $FSTAB
 EOT

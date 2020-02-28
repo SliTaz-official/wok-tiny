@@ -85,7 +85,7 @@ genpkg_rules()
 	etc/inetd.conf etc/host.conf etc/hosts ; do
 	cp -a $WOK/base-tiny/stuff/$i $fs/$i
     done
-     sed '/hostname/{Nd}' -i etc/init.d/network.sh
+    sed '/hostname/{Nd}' -i $fs/etc/init.d/network.sh
 	
     # Busybox config files.
     touch $fs/etc/resolv.conf
@@ -112,7 +112,6 @@ genpkg_rules()
 config_form()
 {
 	if [ -z "$MODE" ]; then
-		[ -n "$HOSTNAME"   ] || HOSTNAME=slitaz
 		[ -n "$INTERFACE"  ] || INTERFACE=eth0
 		[ -n "$IP"         ] || IP=192.168.0.6
 		[ -n "$NETMASK"    ] || NETMASK=255.255.255.0
@@ -121,10 +120,6 @@ config_form()
 	fi
 	cat <<EOT
 <table>
-<tr>
-<td>Host name</td>
-<td><input type="text" name="HOSTNAME" value="$HOSTNAME" /></td>
-</tr>
 <tr>
 <td>Interface</td>
 <td><input type="text" name="INTERFACE" value="$INTERFACE" /></td>
