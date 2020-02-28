@@ -94,7 +94,7 @@ genpkg_rules()
 	# Set hostname\
 	echo -n "Setting hostname..."\
 	hostname -F /etc/hostname\
-	status\n|' $fs/etc/rcS.conf
+	status\n|' $fs/etc/init.d/rcS
     rm -f $fs/etc/init.d/network.sh $fs/etc/network.conf \
 	$fs/etc/services $fs/etc/networks $fs/etc/inetd.conf \
 	$fs/etc/host.conf $fs/etc/hosts
