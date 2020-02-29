@@ -1,6 +1,6 @@
 #!/bin/sh
 
-mkdir -p /boot/fs$$/bin /boot/fs$$/lib /boot/fs$$/proc /boot/fs$$/mnt
+mkdir -p /boot/fs$$/bin /boot/fs$$/lib /boot/fs$$/proc /boot/fs$$/sys /boot/fs$$/mnt
 cp -dpR /lib/modules /boot/fs$$/lib
 cp -p /bin/busybox /boot/fs$$/bin
 ln /boot/fs$$/bin/busybox /boot/fs$$/bin/sh
@@ -13,15 +13,24 @@ cat > /boot/fs$$/init <<EOT
 #!/bin/sh
 
 mount -t proc /proc /proc
+mount -t sysfs /sys /sys
 echo -n "Loading modules..."
 for mod in $LOAD_MODULES; do
 	echo -n " \${mod%%|*}"
 	modprobe \${mod//|/ }
 done
 echo
-mount \$(blkid | sed "/${1:-\$root}/!d;s|: .*||") /mnt
+mdev -s
+root=\$(sed '/root=/!d;s|.*root=\\([^ ]*\\).*|\\1|;s|/|\\\\/|g' /proc/cmdline)
+case "$1" in
+/dev/*) set -- $1 ;;
+*) set -- \$(blkid | sed "/${1:-\$root}/!d;s|: .*||;q") ;;
+esac
+echo "Mounting \$1 ..."
+mount \$1 /mnt
+umount /sys
 umount /proc
-switch_root /mnt /init
+exec switch_root /mnt /init
 EOT
 chmod 755 /boot/fs$$/init
 ( cd /boot/fs$$ ; find * | cpio -o -H newc ) | gzip -9 > /boot/rootfs.gz

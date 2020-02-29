@@ -76,7 +76,7 @@ genpkg_rules()
 	cp -a $WOK/base-tiny/stuff/. $fs/
     cp -a $src/_install/lib $fs/
     cp -a $src/_install/bin/busybox $fs/bin
-    for i in /bin/sh /bin/login /bin/false ; do
+    for i in /bin/sh /bin/login /bin/false /sbin/mdev /init ; do
 	ln $fs/bin/busybox $fs$i
     done
     mkdir -p $fs/etc/init.d
@@ -90,15 +90,13 @@ genpkg_rules()
 	ln -s daemon $fs/etc/init.d/$i
     done
     sed -i 's|network.sh ||' $fs/etc/rcS.conf
-    sed -i 's|.*Executing all initialization scripts|echo -n "Setting hostname..."\
+    sed -i 's|.*Executing all initialization scripts.*|echo -n "Setting hostname..."\
 hostname -F /etc/hostname\
 status\n&|' $fs/etc/init.d/rcS
     rm -f $fs/etc/init.d/network.sh $fs/etc/network.conf \
 	$fs/etc/services $fs/etc/networks $fs/etc/inetd.conf \
 	$fs/etc/host.conf $fs/etc/hosts
 	
-    ln -f $fs/bin/busybox $fs/init
-
     sed -i '2,$s/^#.*//;/^$/d' $fs/etc/init.d/rc* $fs/etc/init.d/daemon \
 	$fs/etc/init.d/*.sh
     sed -i 's/^#.*//;/^$/d' $fs/etc/*.conf $fs/etc/*tab \

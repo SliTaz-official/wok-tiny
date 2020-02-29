@@ -1,23 +1,11 @@
 #!/bin/sh
-# /etc/init.d/rcS - Initial boot script for SliTaz GNU/Linux.
-# Config file is : /etc/rcS.conf
-#
-# rcS is the main initialization script used to check fs, mount, clean,
-# run scripts and start daemons.
-#
 . /etc/init.d/rc.functions
 . /etc/rcS.conf
-
-# Set TZ and boot time.
 [ -s /etc/TZ ] && export TZ="$(cat /etc/TZ)"
-
 echo "Processing /etc/init.d/rcS..."
-
-# Mount /proc.
 echo -n "Mounting proc filesystem..."
 mount proc
 status
-
 if [ "$EARLY_RUN_SCRIPTS" ]; then
 	echo "Executing early initialization scripts..."
 	for script in $EARLY_RUN_SCRIPTS
@@ -25,8 +13,6 @@ if [ "$EARLY_RUN_SCRIPTS" ]; then
 		[ -x /etc/init.d/$script ] && /etc/init.d/$script
 	done
 fi
-
-# Load all modules listed in config file.
 if [ "$LOAD_MODULES" ]; then
 	echo -n "Loading modules..."
 	depmod
@@ -38,32 +24,15 @@ if [ "$LOAD_MODULES" ]; then
 	status
 	[ "$KEEP_MODULES" ] || rm -rf /lib/modules 2> /dev/null
 fi
-
-# Mount /sys.
 echo -n "Mounting sys filesystem..."
 mount sysfs
 status
-
 if [ -e /sbin/mdev ]; then
 	echo -n "Start hotplug..."
 	echo /sbin/mdev > /proc/sys/kernel/hotplug
 	mdev -s
 	status
 fi
-
-echo -n "Updating /dev..."
-for i in /sys/block/*/dev /sys/block/*/*/dev ; do
-	[ -s "$i" ] || continue
-	n=${i%/dev}
-	n=/dev/${n##*/}
-	[ -e $n ] && continue
-	echo -n " ${n##*/}"
-	mknod $n b $(sed 's/:/ /' < $i)
-done
-status
-
-# Before mounting filesystems we check fs specified in the file
-# /etc/rcS.conf and variable $CHECK_FS.
 if [ "$CHECK_FS" ]; then
 	mount -o remount,ro /
 	for i in $CHECK_FS
@@ -72,20 +41,11 @@ if [ "$CHECK_FS" ]; then
 		e2fsck -p $i
 	done
 fi
-
-# Remount rootfs rw.
 echo "Remounting rootfs read/write..."
 mount -o remount,rw /
-
-# Mount filesystems in /etc/fstab.
 echo "Mounting filesystems in fstab..."
 mount -a
-
-# Store boot messages to log files.
 dmesg > /var/log/dmesg.log &
-
-# Parse cmdline args for earlier boot options. All other boot options
-# are in /etc/init./bootopts.sh.
 echo -n "Searching for early boot options..."
 for opt in $(cat /proc/cmdline)
 do
@@ -99,8 +59,6 @@ do
 	esac
 done
 status
-
-# Clean up the system.
 if [ "$CLEAN_UP_SYSTEM" = "yes" ]; then
 	echo -n "Cleaning up the system..."
 	find /var/run -name "*.pid" -type f | xargs rm -f
@@ -112,9 +70,6 @@ else
 	echo -n "Keeping all tmp and pid files..."
 	status
 fi
-
-# Create /dev/cdrom if needed (symlink does not exist on LiveCD).
-# Also add /dev/cdrom to fstab if entry does not exist.
 if [  "$CDROM" ]; then
 	DRIVE_NAME=${CDROM#/dev/}
 else
@@ -133,9 +88,6 @@ if ! fgrep -q "/dev/cdrom" /etc/fstab; then
 		>> /etc/fstab
 	status
 fi
-
-# Handle kernel cmdline parameter config=<device>,<path> to source a
-# disk init script
 if [ "$CONFIG" ]; then
 	DEVICE=${CONFIG%,*}
 	SCRIPT=${CONFIG#*,}
@@ -158,15 +110,11 @@ if [ "$CONFIG" ]; then
 	fi
 	status
 fi
-
-# Mount /proc/bus/usb.
 if [ -d /proc/bus/usb ]; then
 	echo -n "Mounting /proc/bus/usb filesystem..."
 	mount -t usbfs usbfs /proc/bus/usb
 	status
 fi
-
-# Start syslogd and klogd.
 if [ "$KERNEL_LOG_DAEMONS" = "yes" ]; then
 	echo -n "Starting system log deamon: syslogd..."
 	syslogd -s $SYSLOGD_ROTATED_SIZE && status
@@ -175,23 +123,18 @@ if [ "$KERNEL_LOG_DAEMONS" = "yes" ]; then
 else
 	echo "Kernel log daemons are disabled in /etc/rc.conf..."
 fi
-
 [ -d /usr/share/kmap ] && echo -n "Load keymap..." &&
 cat /usr/share/kmap/* | { /bin/loadkmap 2>/dev/null || loadkmap; } &&
 rm -rf /usr/share/kmap && status
-
-# Start all scripts specified with $RUN_SCRIPTS.
+echo -n "Setting hostname..."
+hostname -F /etc/hostname
+status
 echo "Executing all initialization scripts..."
 for script in $RUN_SCRIPTS
 do
 	[ -x /etc/init.d/$script ] && /etc/init.d/$script
 done
-
-# Re-source main config file. In Live mode, daemons list can be modified
-# by boot options (screen=text will remove slim).
 . /etc/rcS.conf
-
-# Start all daemons specified with $RUN_DAEMONS.
 echo "Starting all daemons specified in /etc/rcS.conf..."
 for daemon in $RUN_DAEMONS
 do
@@ -199,8 +142,6 @@ do
 		/etc/init.d/$daemon start
 	fi
 done
-
-# Reset screen and display a bold message.
 if [  "$MESSAGE" ]; then
 	reset
 	echo -e "\033[1m$MESSAGE\033[0m"
