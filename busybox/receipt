@@ -72,8 +72,8 @@ compile_rules()
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
-	mkdir $fs/boot $fs/bin
-	cp -a $WOK/base-tiny/stuff/. $fs/
+    mkdir $fs/boot $fs/bin $fs/sbin
+    cp -a $WOK/base-tiny/stuff/. $fs/
     cp -a $src/_install/lib $fs/
     cp -a $src/_install/bin/busybox $fs/bin
     for i in /bin/sh /bin/login /bin/false /sbin/mdev /init ; do
@@ -102,7 +102,7 @@ status\n&|' $fs/etc/init.d/rcS
     sed -i 's/^#.*//;/^$/d' $fs/etc/*.conf $fs/etc/*tab \
 	$fs/etc/profile $fs/etc/securetty $fs/etc/shells
     find $fs -exec touch -r $fs {} \;
-	cp $stuff/busybox-git.config $fs/boot/config-busybox
+    cp $stuff/busybox-git.config $fs/boot/config-busybox
 }
 
 config_form()

@@ -75,15 +75,11 @@ compile_rules()
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
-    mkdir $fs/bin $fs/boot
+    mkdir $fs/boot $fs/bin $fs/sbin
+    cp -a $WOK/base-tiny/stuff/. $fs/
     cp -a $src/_install/bin/busybox $fs/bin
-    for i in /bin/sh /bin/login /bin/false /sbin/dev /init ; do
+    for i in /bin/sh /bin/login /bin/false /sbin/mdev /init ; do
 	ln -f $fs/bin/busybox $fs$i
-    done
-    mkdir -p $fs/etc/init.d
-    for i in etc/init.d/network.sh etc/network.conf etc/services etc/networks \
-	etc/inetd.conf etc/host.conf etc/hosts ; do
-	cp -a $WOK/base-tiny/stuff/$i $fs/$i
     done
     sed '/hostname/{Nd}' -i $fs/etc/init.d/network.sh
 	
@@ -105,8 +101,8 @@ genpkg_rules()
 	$fs/etc/init.d/*.sh
     sed -i 's/^#.*//;/^$/d' $fs/etc/*.conf $fs/etc/*tab \
 	$fs/etc/profile $fs/etc/securetty $fs/etc/shells
-	
-	cp $stuff/busybox-net-git.config $fs/boot/config-busybox
+    find $fs -exec touch -r $fs {} \;
+    cp $stuff/busybox-net-git.config $fs/boot/config-busybox
 }
 
 config_form()
