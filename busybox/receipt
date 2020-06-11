@@ -147,6 +147,7 @@ EOT
 post_install()
 {
 	chmod 4755 $1/bin/busybox
+	ln -fs /proc/mounts $1/etc/mtab
 	cat >> $1/boot/mkrootfs.pre_exec <<EOT
 if [ -s modules ]; then
 	while read mod; do
