@@ -7,7 +7,7 @@ SHORT_DESC="USB / IDE-CD / PCMCIA CardBus and others boot utility."
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="other"
 WEB_SITE="https://www.plop.at/en/bootmanagers.html"
-TARBALL="$PACKAGE-$VERSION.zip"
+TARBALL="plpbt-$VERSION.zip"
 WGET_URL="https://download.plop.at/files/bootmngr/$TARBALL"
 TARGET="i486"
 

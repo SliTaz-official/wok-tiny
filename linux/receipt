@@ -15,9 +15,10 @@ PATCH="https://www.selenic.com/tiny/2.6.14-tiny1.patch.bz2"
 AUTO_SELECTION="always"
 
 DEPENDS=""
-BUILD_DEPENDS="slitaz-toolchain perl git lzma wget gcc2 upx"
-BUILD_SUGGESTED="advancecomp zopfli"
+BUILD_DEPENDS="slitaz-toolchain perl git lzma wget gcc2"
+BUILD_SUGGESTED="advancecomp"
 INSTALL_DEPENDS="lz4 grep"
+INSTALL_SUGGESTED="upx"
 
 case "$TARGET" in
 	i486) SUGGESTED="memtest ipxe plop";;  # bundle may install a boot menu
@@ -44,11 +45,9 @@ compile_rules()
 	echo 'obj-y += kstrdup.o' >> mm/Makefile
 	sed -i 's|3.1024|11*256|' arch/i386/boot/compressed/misc.c
 	sed -i 's/O_CREAT/&|O_TRUNC/' init/initramfs.c
-	which advdef 2> /dev/null && ! which upx 2> /dev/null &&
+	which advdef 2> /dev/null &&
 	sed -i 's|gzip)|&\n	advdef -z4 $@|' \
 		usr/Makefile arch/i386/boot/compressed/Makefile
-	false && which zopfli 2> /dev/null &&
-	sed -i 's|gzip -f -9 <|time zopfli --i100 -c|' scripts/Makefile.lib
 
 	mkdir $src/slitaz
 	cp $stuff/list_modules.sh $src/slitaz
@@ -72,10 +71,6 @@ compile_rules()
 	cp $stuff/bundle .
 	sh ./bundle
 	S2bin cmdline
-	
-	which upx 2> /dev/null &&
-	cp arch/i386/boot/bzImage arch/i386/boot/bzImage.noupx &&
-	upx --ultra-brute arch/i386/boot/bzImage
 }
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
@@ -96,5 +91,7 @@ post_install()
 {
 	[ -s $1/boot/cmdline ] && cat $1/boot/cmdline | sed 's/^ *//' | \
 		dd of=$1/boot/bzImage conv=notrunc bs=1 seek=768 count=3072
+	which upx 2> /dev/null &&
+	upx --ultra-brute $1/boot/bzImage
 	$1/boot/pack $1/boot/bzImage
 }
