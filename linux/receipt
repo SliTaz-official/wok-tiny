@@ -15,8 +15,7 @@ PATCH="https://www.selenic.com/tiny/2.6.14-tiny1.patch.bz2"
 AUTO_SELECTION="always"
 
 DEPENDS=""
-BUILD_DEPENDS="slitaz-toolchain perl git lzma wget gcc2 upx"
-BUILD_SUGGESTED="advancecomp"
+BUILD_DEPENDS="slitaz-toolchain perl git lzma wget gcc2 upx advancecomp"
 INSTALL_DEPENDS="lz4 grep"
 
 case "$TARGET" in
@@ -70,9 +69,13 @@ compile_rules()
 	cp $stuff/bundle .
 	sh ./bundle
 	S2bin cmdline
-	which upx 2> /dev/null &&
-	cp arch/i386/boot/bzImage arch/i386/boot/bzImage.noupx &&
-	upx --ultra-brute arch/i386/boot/bzImage
+	cp arch/i386/boot/bzImage arch/i386/boot/bzImage.386
+	cp .config .config.386
+	cp System.map System.map.386
+	cp $stuff/linux-$VERSION-slitaz.config.586 .config
+	yes '' | make ARCH=i386 HOSTCC=gcc-2 config
+	make ARCH=i386 CC=gcc-2 HOSTCC=gcc-2 -j 4 bzImage
+	which upx 2> /dev/null && upx --ultra-brute arch/i386/boot/bzImage
 }
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
@@ -83,14 +86,32 @@ genpkg_rules()
 	dd if=$src/bootloader.bin of=$fs/boot/bzImage conv=notrunc
 	dd if=$src/cmdline.bin bs=1 seek=560 of=$fs/boot/bzImage conv=notrunc
 	cp -a $src/pack $fs/boot/
-	cp -a $src/System.map $fs/boot/
+	cp -a $src/System.map* $fs/boot/
 	cp -a $src/.config $fs/boot/config
+	[ -s $src/.config.386 ] && cp -a $src/.config.386 $fs/boot/config.386
 	cp -a $src/bundle.sh $fs/boot/bundle
+}
+
+config_form()
+{
+	cat <<EOT
+<table>
+<td>Tune the kernel according to the CPU type<td>
+<td>
+<input type="radio" name="CPU586" $([ "$CPU586" = "no" ] && echo "checked=checked ")value="no"> for any CPU starting from 386sx
+<input type="radio" name="CPU586" $([ "$CPU586" != "no" ] && echo "checked=checked ")value="yes"> optimized for pentium or newer CPU
+</td>
+</tr>
+</table>
+EOT
 }
 
 # Pre and post install commands for Tazpkg.
 post_install()
 {
+	for i in $1/boot/*.386 ; do
+		[ "$CPU586" = "yes" ] && rm -f $i || mv -f $i ${i%.386}
+	done 2> /dev/null
 	rm -f $1/boot/bzImage.noupx
 	[ -s $1/boot/cmdline ] && cat $1/boot/cmdline | sed 's/^ *//' | \
 		dd of=$1/boot/bzImage conv=notrunc bs=1 seek=768 count=3072
