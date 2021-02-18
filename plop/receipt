@@ -11,7 +11,7 @@ TARBALL="plpbt-$VERSION.zip"
 WGET_URL="https://download.plop.at/files/bootmngr/$TARBALL"
 TARGET="i486"
 
-BUILD_DEPENDS="xz"
+BUILD_DEPENDS="xz wget"
 
 # Rules to configure and make the package.
 compile_rules()
