@@ -7,15 +7,35 @@ SHORT_DESC="Memory failures detection tool."
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="GPL2"
 WEB_SITE="http://www.memtest.org/"
-TARBALL="$PACKAGE-$VERSION"
-WGET_URL="http://cook.slitaz.org/cooker.cgi?download=../wok/memtest/taz/memtest-$VERSION/fs/boot/memtest"
+TARBALL="memtest86+-$VERSION.tar.gz"
+WGET_URL="http://www.memtest.org/download/$VERSION/$TARBALL"
 TARGET="i486"
+
+BUILD_DEPENDS="xz"
+
+# Rules to configure and make the package.
+compile_rules()
+{
+	ls $stuff/memtest*-$VERSION-*.patch &&
+	for i in $stuff/memtest*-$VERSION-*.patch ; do
+		patch -p1 < $i
+	done
+	make
+	cp $stuff/*.S $stuff/pack .
+	for i in bootloader unpack ; do
+		cc -o $i.o -Wa,-a=$i.lst -c $i.S
+		objcopy -O binary $i.o $i.bin
+	done
+	sed -i "s/VERSION/$VERSION/" pack
+	./pack --build bootloader.bin unpack.bin
+	./pack memtest.bin memtest.packed
+} 
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
 	mkdir -p $fs/boot
-	cp $SOURCES_REPOSITORY/$TARBALL $fs/boot/$PACKAGE
+	cp $src/memtest.packed $fs/boot/$PACKAGE
 }
 
 # Post install/remove commands for Tazpkg.
