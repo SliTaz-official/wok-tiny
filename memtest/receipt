@@ -16,7 +16,7 @@ BUILD_DEPENDS="xz"
 # Rules to configure and make the package.
 compile_rules()
 {
-	ls $stuff/memtest*-$VERSION-*.patch &&
+	ls $stuff/memtest*-$VERSION-*.patch 2> /dev/null &&
 	for i in $stuff/memtest*-$VERSION-*.patch ; do
 		patch -p1 < $i
 	done

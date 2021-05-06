@@ -3,7 +3,7 @@
 PACKAGE="plop"
 VERSION="5.0.15"
 CATEGORY="base-system"
-SHORT_DESC="USB / IDE-CD / PCMCIA CardBus and others boot utility."
+SHORT_DESC="USB / IDE-CD / PCMCIA CardBus and others boot utility (486+)."
 MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="other"
 WEB_SITE="https://www.plop.at/en/bootmanagers.html"

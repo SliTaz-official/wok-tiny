@@ -40,7 +40,7 @@ store()
 
 compress()
 {
-	xz -z -e --format=lzma --lzma1=mf=bt2 --stdout | dd bs=1 skip=13
+	xz -z -e --format=raw --lzma1=mf=bt2,nice=132 --stdout
 }
 
 main()
