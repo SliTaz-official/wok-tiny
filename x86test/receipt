@@ -1,0 +1,42 @@
+# SliTaz package receipt.
+
+PACKAGE="x86test"
+VERSION="0.10a"
+CATEGORY="base-system"
+SHORT_DESC="CPU failures detection tool."
+MAINTAINER="pascal.bellard@slitaz.org"
+LICENSE="GPL2"
+WEB_SITE="http://www.slitaz.org/"
+TARGET="i486"
+
+BUILD_DEPENDS="xz"
+
+# Rules to configure and make the package.
+compile_rules()
+{
+	mkdir -p $src && cd $src
+	cp $stuff/x86test $stuff/*.S $stuff/pack .
+	sed -i '/#define ONLY8086/d' unpack.S
+	for i in bootloader unpack ; do
+		cc -o $i.o -Wa,-a=$i.lst -c $i.S
+		objcopy -O binary $i.o $i.bin
+	done
+	sed -i "s/VERSION/$VERSION/" pack
+	./pack --build bootloader.bin unpack.bin
+	./pack x86test x86test.packed
+	dd if=bootloader.bin of=x86test conv=notrunc 2> /dev/null
+} 
+
+# Rules to gen a SliTaz package suitable for Tazpkg.
+genpkg_rules()
+{
+	mkdir -p $fs/boot
+	cp $src/x86test.packed $fs/boot/$PACKAGE
+}
+
+# Post install/remove commands for Tazpkg.
+post_install()
+{
+	grep -qs ^x86test $1/boot/bootmenu ||
+	echo "x86test	X86test,cpu,x86		Check X86 CPU (may run under DOS if renamed to x86test.exe)" >> $1/boot/bootmenu
+}
