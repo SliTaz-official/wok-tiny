@@ -47,6 +47,7 @@ ASK_VGA		= -3
 // #define NO_FLOPPY_TABLE_PATCH	remove floppy parameter table patch
 // #define NO_OUTPUT		remove output code
 
+	//.arch	i386,nojumps
 	.code16
 	.org	0
 
@@ -83,21 +84,21 @@ zeroed		= 48+10			# gdt + zeroed registers
 					# length of bootsect + length of
 					# setup + room for stack;
 					# 12 is disk parm size.
-	pushw	$INITSEG
-	popw	%ss			# %ss contain INITSEG
+	movw	$INITSEG, %ax
+	movw	%ax, %ss		# %ss contain INITSEG
 	movw	%di, %sp		# put stack at INITSEG:stacktop-...
-	pushw	%ss
-	popw	%es			# %es = %ss = INITSEG
-	xorw	%ax, %ax		# %ax = 0
+	movw	%ax, %es		# %es = %ss = INITSEG
+	cbw				# %ax = 0
+	cld
 #ifdef EXE_CMDLINE
 	movw	$zeroed+1, %cx		# clear gdt + offset, %ds, limits, cmdline=""
-	rep				# don't worry about cld
-	stosb				# already done above
+	rep
+	stosb
 	decw	%di
 #else
 	movw	$zeroed/2, %cx		# clear gdt + offset, %ds, limits
-	rep				# don't worry about cld
-	stosw				# already done above
+	rep
+	stosw
 #endif
 	popw	%bx			# offset = 0
 .endm
@@ -205,7 +206,6 @@ skipcmdline:
 # endif
 #else
 	ldsw	0x78(%bx), %si		# %ds:%bx+0x78 is parameter table address
-	popw	%di
 	pushw	%es
 	pushw	%di
 # ifdef	FLOPPY_CMDLINE
@@ -508,8 +508,12 @@ kill_motor:
 
 #ifndef EXE_ONLY
 
-#define FLOPPY_CYLINDERS	80	
-#define FLOPPY_HEADS		2	
+# 720KB 800KB 880KB 1.04MB 1.12MB 1.2MB 1.44MB 1.6MB 1.68MB 1.76MB
+# 1.84MB 1.92MB 2.88MB 3.12MB 3.20MB 3.52MB 3.84MB support
+# do not support 820KB 830KB 1.48MB 1.49MB 1.72MB 1.74MB
+#define FLOPPY_CYLINDERS	80
+# do not support 360KB 410KB 420KB
+#define FLOPPY_HEADS		2
 
 #if defined(MULTI_FLOPPY) && defined(COUNTER)
 .macro	putsmsg
@@ -529,7 +533,6 @@ nextdigit:
 #endif
 
 check_limits:
-	popw	%dx
         cmpb    %cl, %al		# max sector known ?
         jbe	next_head		#   no -> store it
         #.byte	0xd6	# SALC		# sector by sector
@@ -556,16 +559,16 @@ more1trk:
 	pushw	%ax			# save context
 	movb	$2, %ah			# cmd: read chs
         int     $0x13
-	popw	%dx			# save %ax
+	popw	%bp			# save %ax
         popw    %ax			# limits
+	popw	%dx
 	jc	check_limits
 	xchgw	%ax, %bp
-	addw	%dx,%cx			# next sector
+	addw	%ax,%cx			# next sector
 	movw	%cx, %gs
-	addb	%dl,%bh
-	addb	%dl,%bh			# next location
-	subw	%dx,%di			# update sector counter
-	popw	%dx
+	addb	%al,%bh
+	addb	%al,%bh			# next location
+	subw	%ax,%di			# update sector counter
 	jz	putcdot
 read_sectors:
 	movw	%gs, %cx

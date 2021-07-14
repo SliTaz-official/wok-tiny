@@ -20,7 +20,7 @@ compile_rules()
 		cc -o $i.o -Wa,-a=$i.lst -c $i.S
 		objcopy -O binary $i.o $i.bin
 	done
-	dd if=TFTTEST.COM of=bootloader.bin bs=16 seek=6 conv=notrunc 2> /dev/null
+	dd if=TFTTEST.COM of=bootloader.bin bs=16 seek=9 conv=notrunc 2> /dev/null
 	umount mnt
 } 
 
@@ -35,5 +35,5 @@ genpkg_rules()
 post_install()
 {
 	grep -qs ^tfttest $1/boot/bootmenu ||
-	echo "tfttest	Tfttest,pixel,tft	Check dead pixels (may run under DOS if renamed to tfttest.com)" >> $1/boot/bootmenu
+	echo "tfttest	Tfttest,pixel,tft	Check pixels" >> $1/boot/bootmenu
 }

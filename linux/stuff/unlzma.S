@@ -107,6 +107,7 @@ ws	=	ws2+LOCALS+15
  
 	mov	$ws1, CX
 #ifdef ONLY8086
+	.arch	i8086
 	movw	$2048/2, %ax
 lzd1:
 	pushw	%ax
@@ -195,23 +196,31 @@ lzdmainlp:
 # else
 	shrb	$8-PROP_LC, %bl
 # endif
+#else
+	xor	%bx,%bx
 #endif
 
 #if PROP_LP != 0
 	movb	posState2(BP), %dl
-# ifdef ONLY8086
+# if PROP_LC != 0
+#  ifdef ONLY8086
 	movb	$PROP_LC, %cl
 	shl	%cl, DX
-# else
+#  else
 	shl	$PROP_LC, DX
-# endif
+#  endif
 	movb	$0, %bh
+# endif
 	add	BX, DX
 #endif
 
+#if PROP_LC == 0 && PROP_LP == 0
+	mov	$1846, AX
+#else
 	movb	$3, %ah
 	mul	BX		// dx = 3*bh
 	add	$1846, AX
+#endif
 
 //       int symbol = 1;
 

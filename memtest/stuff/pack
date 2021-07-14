@@ -45,7 +45,7 @@ bits()
 
 compress()
 {
-	xz -z -e --format=raw --lzma1=mf=bt2,lc=$(bits LC),lp=$(bits LP),pb=$(bits PB),nice=127 --stdout 
+	xz -z -e --format=raw --lzma1=lc=$(bits LC),lp=$(bits LP),pb=$(bits PB) --stdout
 }
 
 main()

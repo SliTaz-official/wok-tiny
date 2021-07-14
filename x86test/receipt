@@ -11,18 +11,27 @@ TARGET="i486"
 
 BUILD_DEPENDS="xz"
 
-# Rules to configure and make the package.
-compile_rules()
+tune_lzma()
 {
-	mkdir -p $src && cd $src
-	cp $stuff/x86test $stuff/*.S $stuff/pack .
+	cp $stuff/*.S $stuff/pack .
+	sed "s/VERSION/$VERSION/;s|lzma1=|&nice=$1,|" -i pack
 	sed -i '/#define ONLY8086/d' unpack.S
+	while [ -n "$2" ]; do
+		sed "s|^#define PROP_$2 .*|#define PROP_$2 $3|" -i unlzma.S
+		shift 2
+	done
 	for i in bootloader unpack ; do
 		cc -o $i.o -Wa,-a=$i.lst -c $i.S
 		objcopy -O binary $i.o $i.bin
 	done
-	sed -i "s/VERSION/$VERSION/" pack
 	./pack --build bootloader.bin unpack.bin
+}
+
+# Rules to configure and make the package.
+compile_rules()
+{
+	mkdir -p $src && cd $src
+	tune_lzma 36,mf=bt2 PB 0
 	./pack x86test x86test.packed
 	dd if=bootloader.bin of=x86test conv=notrunc 2> /dev/null
 } 

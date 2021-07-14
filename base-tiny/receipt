@@ -14,7 +14,7 @@ CONFIG_FILES="/etc/rcS.conf /etc/passwd /etc/fstab \
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
-	for i in $CONFIG_FILES ; do
+	for i in $CONFIG_FILES /var/run /var/log ; do
 		[ -e $stuff$i ] && echo ${i#/}
 	done | ( cd $stuff ; cpio -o -H newc ) | ( cd $fs ; cpio -id )
 }

@@ -9,7 +9,7 @@ MAINTAINER="pascal.bellard@slitaz.org"
 LICENSE="GPL2"
 [ -n "$TARGET" ] || TARGET="i486"
 DEPENDS="busybox"
-BUILD_DEPENDS="bzip2 uclibc-cross-compiler-$TARGET wget advancecomp"
+BUILD_DEPENDS="bzip2 uclibc-cross-compiler-$TARGET wget"
 TARBALL="busybox-$VERSION.tar.bz2"
 WEB_SITE="http://www.busybox.net/"
 WGET_URL="https://git.busybox.net/busybox/snapshot/busybox-$GIT_TAG.tar.bz2"
@@ -37,8 +37,6 @@ EOT
     [ $(. $WOK/linux/receipt; printf "%d%02d%02d" ${VERSION//./ }) -le 20626 ] &&
     	echo apply 0001-mdev-create-devices-from-sys-dev.patch &&
 	patch -p1 -R < $stuff/0001-mdev-create-devices-from-sys-dev.patch
-    [ "$(which advdef)" ] &&
-	sed -i 's|^cmd_gzip.*|& \&\& advdef -z4 $@|' scripts/Makefile.lib
     cp $stuff/$PACKAGE-git.config .config
     var="CONFIG_CROSS_COMPILER_PREFIX"
     sed -i "s/.*$var.*/$var=\"uclibc-$TARGET-\"/" .config
@@ -75,19 +73,19 @@ compile_rules()
 # Rules to gen a SliTaz package suitable for Tazpkg.
 genpkg_rules()
 {
-    mkdir $fs/boot $fs/bin $fs/sbin
-    cp -a $WOK/base-tiny/stuff/. $fs/
-    sed -i -e 's| *#.*$||' -e '/^$/d' $fs/etc/services
+    mkdir -p $fs/boot $fs/bin $fs/sbin $fs/etc/init.d
+    sed -e 's| *#.*$||' -e '/^$/d' < $stuff/services > $fs/etc/services
     cp -a $src/_install/bin/busybox $fs/bin
     for i in /bin/sh /bin/login /bin/false /sbin/mdev /init ; do
 	ln -f $fs/bin/busybox $fs$i
     done
-    sed '/hostname/{Nd}' -i $fs/etc/init.d/network.sh
 	
     # Busybox config files.
     touch $fs/etc/resolv.conf
     cp $stuff/inetd.conf $fs/etc
+    cp $stuff/network.conf $fs/etc
     cp $stuff/daemon $fs/etc/init.d
+    cp $stuff/network.sh $fs/etc/init.d
     for i in crond dnsd ftpd httpd inetd klogd ntpd syslogd telnetd tftpd \
 	     udhcpd zcip ; do
 	grep -qi config_$i=y $src/.config &&
@@ -98,10 +96,8 @@ genpkg_rules()
     cp $stuff/udhcp.script $fs/usr/share/udhcpc/default.script
     chmod +x $fs/usr/share/udhcpc/default.script
 	
-    sed -i '2,$s/^#.*//;/^$/d' $fs/etc/init.d/rc* $fs/etc/init.d/daemon \
-	$fs/etc/init.d/*.sh
-    sed -i 's/^#.*//;/^$/d' $fs/etc/*.conf $fs/etc/*tab \
-	$fs/etc/profile $fs/etc/securetty $fs/etc/shells
+    sed -i '2,$s/^#.*//;/^$/d' $fs/etc/init.d/daemon $fs/etc/init.d/*.sh
+    sed -i 's/^#.*//;/^$/d' $fs/etc/*.conf
     find $fs -exec touch -r $fs {} \;
     cp $stuff/busybox-net-git.config $fs/boot/config-busybox
 }
@@ -146,6 +142,40 @@ config_form()
 <td><input type="text" name="DNS_SERVER" value="$DNS_SERVER" /></td>
 </tr>
 </table>
+EOT
+}
+
+config_note()
+{
+	cat <<EOT
+<script type="text/javascript">
+function update_form()
+{
+	var hide = true
+	for (var i = 0; i < document.forms.length; i++) {
+		for (var j = 0; j < document.forms[i].elements.length; j++) {
+			var obj = document.forms[i].elements[j]
+			if (obj.name == "MODE" && obj.value == "STATIC")
+				hide = false
+		}
+	}	
+	for (var i = 0; i < document.forms.length; i++) {
+		for (var j = 0; j < document.forms[i].elements.length; j++) {
+			var obj = document.forms[i].elements[j]
+			switch (obj.name) {
+			case "IP" :
+			case "NETMASK" :
+			case "GATEWAY" :
+			case "DNS_SERVER" :
+				obj.disabled = hide; break;
+			}
+		}
+	}	
+}
+update_form()
+window.onchange = update_form
+//-->
+</script>
 EOT
 }
 

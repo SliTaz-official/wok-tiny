@@ -9,7 +9,7 @@
 
 NAME=$(basename $0)
 DESC="$NAME deamon"
-DAEMON=$(which $NAME || echo $NAME)
+DAEMON=$NAME
 eval $(grep -i ^${NAME}_OPTIONS /etc/daemons.conf | sed 's/.*_OPT/OPT/')
 PIDFILE=/var/run/$NAME.pid
 
@@ -47,7 +47,7 @@ case "$1" in
     fi
     echo -n "Starting $DESC: $NAME... "
     $DAEMON $OPTIONS 
-    [ -f $PIDFILE ] || ps ax | sed "/$NAME/!d;/etc\/init/d;s| .*||" > $PIDFILE
+    [ -f $PIDFILE ] || ps | sed "/$NAME/!d;/etc\/init/d;s| .*||" > $PIDFILE
     active_pidfile $PIDFILE $NAME
     status
     ;;
@@ -73,7 +73,7 @@ case "$1" in
     kill `cat $PIDFILE`
     sleep 2
     $DAEMON $OPTIONS
-    [ -f $PIDFILE ] || ps ax | sed "/$NAME/!d;/etc\/init/d;s| .*||" > $PIDFILE
+    [ -f $PIDFILE ] || ps | sed "/$NAME/!d;/etc\/init/d;s| .*||" > $PIDFILE
     active_pidfile $PIDFILE $NAME
     status
     ;;

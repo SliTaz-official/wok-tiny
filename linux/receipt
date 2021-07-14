@@ -29,20 +29,28 @@ S2bin()
 	objcopy -O binary $1.o $1.bin
 }
 
+rootfs()
+{
+	[ -s $stuff/root.cpio ] && cp $stuff/root.cpio . &&
+	sed -i 's|CONFIG_INITRAMFS_SOURCE="|&root.cpio|' .config
+}
+
 # Rules to configure and make the package.
 compile_rules()
 {
+	export CFLAGS="-march=i386 -Os -pipe -fomit-frame-pointer"
 	[ -s $SRC/$(basename $PATCH) ] ||
 	wget --no-check-certificate -O $SRC/$(basename $PATCH) $PATCH
-	bzcat $SRC/$(basename $PATCH) | patch -p1
+	bzcat $SRC/$(basename $PATCH) | patch -p1 &&
+	sed '/DEBUG/,/* kstrdup/d' < mm/slab.c > mm/kstrdup.c &&
+	echo 'obj-y += kstrdup.o' >> mm/Makefile
 	patch -p0 < $stuff/linux-2.6.14-unpack.u
 	patch -p0 < $stuff/jsclipboard.u
 	sed -i 's|\([>\.]\)val|\1u.val|;s|\([>\.]\)next|\1u.next|;s|\t};|\t} u;|' \
 		lib/inflate.c
-	sed '/DEBUG/,/* kstrdup/d' < mm/slab.c > mm/kstrdup.c
-	echo 'obj-y += kstrdup.o' >> mm/Makefile
 	sed -i 's|3.1024|11*256|' arch/i386/boot/compressed/misc.c
 	sed -i 's/O_CREAT/&|O_TRUNC/' init/initramfs.c
+	sed -i 's|hostname|echo slitaz|' scripts/mkcompile_h
 	which advdef 2> /dev/null && ! which upx 2> /dev/null &&
 	sed -i 's|gzip)|&\n	advdef -z4 $@|' \
 		usr/Makefile arch/i386/boot/compressed/Makefile
@@ -59,6 +67,7 @@ compile_rules()
 	sed -i 's/^config %config:/config:/' Makefile
 	
 	cp $stuff/linux-$VERSION-slitaz.config .config
+	rootfs
 	yes '' | make ARCH=i386 HOSTCC=gcc-2 config
 	make ARCH=i386 CC=gcc-2 HOSTCC=gcc-2 -j 4 bzImage
 	
@@ -69,10 +78,13 @@ compile_rules()
 	cp $stuff/bundle .
 	sh ./bundle
 	S2bin cmdline
+	[ $(upx --version 2> /dev/null | sed '/upx/!d;s|upx ||;s|\.||;q')0 -ge 3960 ] &&
+		upx --ultra-brute arch/i386/boot/bzImage
 	cp arch/i386/boot/bzImage arch/i386/boot/bzImage.386
 	cp .config .config.386
 	cp System.map System.map.386
 	cp $stuff/linux-$VERSION-slitaz.config.586 .config
+	rootfs
 	yes '' | make ARCH=i386 HOSTCC=gcc-2 config
 	make ARCH=i386 CC=gcc-2 HOSTCC=gcc-2 -j 4 bzImage
 	which upx 2> /dev/null && upx --ultra-brute arch/i386/boot/bzImage
@@ -82,25 +94,28 @@ compile_rules()
 genpkg_rules()
 {
 	mkdir $fs/boot
-	cp -a $src/arch/i386/boot/bzImage* $fs/boot/
-	dd if=$src/bootloader.bin of=$fs/boot/bzImage conv=notrunc
-	dd if=$src/cmdline.bin bs=1 seek=560 of=$fs/boot/bzImage conv=notrunc
 	cp -a $src/pack $fs/boot/
-	cp -a $src/System.map* $fs/boot/
-	cp -a $src/.config $fs/boot/config
-	[ -s $src/.config.386 ] && cp -a $src/.config.386 $fs/boot/config.386
 	cp -a $src/bundle.sh $fs/boot/bundle
+	for i in '' .386 ; do
+		[ -s $src/arch/i386/boot/bzImage$i ] || continue
+		cp -a $src/arch/i386/boot/bzImage$i $fs/boot/
+		dd if=$src/bootloader.bin of=$fs/boot/bzImage$i conv=notrunc
+		dd if=$src/cmdline.bin bs=1 seek=560 of=$fs/boot/bzImage$i conv=notrunc
+		cp -a $src/System.map$i $fs/boot/
+		cp -a $src/.config$i $fs/boot/config$i
+	done
 }
 
 config_form()
 {
 	cat <<EOT
+<p>
+Tune the kernel according to the CPU type
+</p>
 <table>
-<td>Tune the kernel according to the CPU type<td>
-<td>
-<input type="radio" name="CPU586" $([ "$CPU586" = "no" ] && echo "checked=checked ")value="no"> for any CPU starting from 386sx
-<input type="radio" name="CPU586" $([ "$CPU586" != "no" ] && echo "checked=checked ")value="yes"> optimized for pentium or newer CPU
-</td>
+<tr>
+<td><input type="radio" name="CPU586" $([ "$CPU586" = "no" ] && echo "checked=checked ")value="no"> for any CPU starting from 386sx</td>
+<td><input type="radio" name="CPU586" $([ "$CPU586" != "no" ] && echo "checked=checked ")value="yes"> optimized for pentium or newer CPU</td>
 </tr>
 </table>
 EOT
@@ -112,7 +127,6 @@ post_install()
 	for i in $1/boot/*.386 ; do
 		[ "$CPU586" = "yes" ] && rm -f $i || mv -f $i ${i%.386}
 	done 2> /dev/null
-	rm -f $1/boot/bzImage.noupx
 	[ -s $1/boot/cmdline ] && cat $1/boot/cmdline | sed 's/^ *//' | \
 		dd of=$1/boot/bzImage conv=notrunc bs=1 seek=768 count=3072
 	$1/boot/pack $1/boot/bzImage

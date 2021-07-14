@@ -13,6 +13,7 @@ BUILD_DEPENDS="bzip2 uclibc-cross-compiler-$TARGET wget"
 TARBALL="$PACKAGE-$VERSION.tar.bz2"
 WEB_SITE="http://www.busybox.net/"
 WGET_URL="https://git.busybox.net/busybox/snapshot/busybox-$GIT_TAG.tar.bz2"
+CONFIG_FILES="/etc/rcS.conf /etc/hostname /etc/fstab /etc/init.d/local.sh"
 AUTO_SELECTION="always"
 
 apply_bb_patchs()
@@ -159,13 +160,13 @@ if [ -s modules ]; then
 fi
 EOT
 	[ "$STUPID" ] && cat >> $1/boot/mkrootfs.pre_exec <<EOT
-for i in boot/bzImage boot/memtest boot/ipxe; do
+for i in boot/bzImage boot/memtest boot/ipxe boot/plop boot/x86test; do
 	[ -s \$i ] || continue
 	dd if=\$i bs=512 count=1 | \\
 	sed "s|\$(echo -en '\x64\x66\x8F\x47\x78')|\$(echo -en '\x5E\x5E\x90\x90\x90')|" | \\
 	sed "s|\$(echo -en '\x66\x8F\x47\x78')|\$(echo -en '\x5E\x5E\x90\x90')|" | \\
 	sed "s|\$(echo -en '\x77\x02\xB0\x01')|\$(echo -en '\x90\x90\xB0\x01')|" | \\
-	sed "s|\$(echo -en '\x98\xCD\x13')|\$(echo -en '\x89\x90\x90')|" | \\
+	sed "s|\$(echo -en '\x98\xCD\x13')|\$(echo -en '\x98\x90\x90')|" | \\
 	sed "s|\$(echo -en '\x60\xCD\x13')|\$(echo -en '\x60\x90\x90')|" | \\
 	sed "s|\$(echo -en '\xB0\x31\x1C\x03\xB4\x0E')|\$(echo -en '\xB0\x31\x14\xFD\xB4\x0E')|" | \\
 	dd of=\$i conv=notrunc

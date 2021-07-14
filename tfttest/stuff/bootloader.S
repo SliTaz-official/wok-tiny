@@ -5,40 +5,57 @@
 	.globl	_start
 _start:
 	call	start2
+	
+BPB	=	0x3E
+#define TINY_MENU	Tiny SliTaz floppy boot menu
+#ifdef	TINY_MENU
+	.org	BPB-12
+	xchgw	%ax, %di		# 79 58 41 E8
+	popw	%ax
+	incw	%cx
+	call	called
+called:
+	addw	$0x20, %cs:bootseg+0x201	# code at 07C0:0200
+	.org	BPB, 0x90
+#endif
+	
+	.org	BPB
 start2:
-	popw	%bx
-	cmpb	$0x1, %bh
+	popw	%ax
+com_offset	=	0x100
+	cmpw	$com_offset+3, %ax
 	je	dotcom
-	xorw	%ax, %ax		# %ax = 0
-	movw	%ax, %ds
-	leaw	int21-start2(%bx), %ax
-	movw	%ax,0x21*4
-	movw	%cs,0x21*4+2
-	movw	$0x7C0-0x10, %ax
-	movw	%ax, %ds
+	cwd
+int21hook:
+	movb	$int21-_start, %al
+	movw	%dx, %ds
+	movw	%ax, 0x21*4
+	movw	%cs, 0x21*4+2
+bootseg:
+	movw	$0x7C0-com_offset/16, %ax
+	.byte	0x3d			# cmp $0xc88c, %ax
 dotcom:
-	movw	%ds, %ax
-	addw	$6, %ax			# addw $code/16, %ax
+	movw	%cs, %ax
+paragraphs	=	9
+	addw	$paragraphs, %ax
 	movw	%ax, %ds
 	movw	%ax, %es
 	movw	%ax, %ss
 	movw	$0xFFFE, %sp
-	pushw	%ds
-	movw	$0x100, %ax
 	pushw	%ax
-	cbw
-	xorw	%bx, %bx
+	movw	$com_offset, %ax
+	pushw	%ax
+	cbw				# %ax = 0
 	retf
 
 int21:
-	cmpb	$7, %ah
+	subb	$7, %ah
 	jne	not_input
-	movb	$0, %ah
-	int	$0x16
+	int	$0x16			# %ah = 0
 do_iret:
 	iret
 not_input:
-	cmpb	$9, %ah
+	cmpb	$9-7, %ah
 	jne	abort
 	movw	%dx, %si
 puts:
@@ -51,8 +68,8 @@ puts:
 	jmp	puts
 abort:
 	ljmp	$0xffff,$0
-	
-	.org	0x60
+
+	.org	paragraphs*16	
 code:
 	.org	510	
 	
