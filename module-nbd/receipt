@@ -1,14 +1,13 @@
 # SliTaz package receipt.
 
-PACKAGE="jslinux-config"
+PACKAGE="module-nbd"
 VERSION="2.6.20"
 CATEGORY="base-system"
 GROUP="driver"
-SHORT_DESC="Tiny SliTaz configuration files for jslinux"
+SHORT_DESC="Kernel module for the network block device"
 MAINTAINER="pascal.bellard@slitaz.org"
-LICENSE="BSD"
+LICENSE="GPL2"
 WEB_SITE="http://tiny.slitaz.org/"
-DEPENDS="custom-console"
 WANTED="linux"
 
 # Rules to gen a SliTaz package suitable for Tazpkg.
@@ -19,18 +18,15 @@ genpkg_rules()
 	export _pkg=$WOK/$WANTED/install
 	path=lib/modules/$(ls $_pkg/lib/modules)/kernel
 	mkdir -p $fs/$path $fs/dev
-	$src/slitaz/list_modules.sh drivers/char/jsclipboard.ko | while read module; do
+	$src/slitaz/list_modules.sh drivers/block/nbd.ko | while read module; do
 		dir=$path/$(dirname $module)
 		[ -d $fs/$dir ] || mkdir -p $fs/$dir
 		cp -a $_pkg/$path/$module $fs/$dir
 	done
-	mknod -m 660 $fs/dev/clipboard c 10 231
 }
 
 # Post install/remove commands for Tazpkg.
 post_install()
 {
-	for i in jsclipboard ; do
-		grep -qs ^$i$ $1/modules || echo $i >> $1/modules
-	done
+	grep -qs ^${PACKAGE#*-}$ $1/modules || echo ${PACKAGE#*-} >> $1/modules
 }
