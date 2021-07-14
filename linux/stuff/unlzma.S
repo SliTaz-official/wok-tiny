@@ -97,11 +97,11 @@ ws	=	ws2+LOCALS+15
 #ifndef FLAT32
  *   input   ds:si=inStream, es:di=outStream
  *   output  outStream[], ds:si, es:di
- 	.code 16
+ 	.code16
 #else
  *   input   esi=inStream, edi=outStream
  *   output  outStream[], esi, edi
- 	.code 32
+ 	.code32
 #endif
  */
  
@@ -252,7 +252,13 @@ lzd6:
 	
 //         int matchByte = outStream[nowPos - rep0];
 
+#if defined(FLAT32) || defined(FLAT16OUT)
+	mov	nowPos(BP), BX
+	sub	rep0(BP), BX
+	movb	(BX), %bl
+#else
 	call	DicoRep02ESDI	// %bl = outStream[nowPos - rep0];
+#endif
 	
 //         do {
 //           int bit;
@@ -668,12 +674,26 @@ lzd19:
 lzd13z:
 //         previousByte = outStream[nowPos - rep0];
 //         outStream[nowPos++] = previousByte;
-
-	call	outcharDico 	// %bl = outStream[nowPos++] = outStream[nowPos - rep0]
-
 //       } while(--len != 0);
 
+#if defined(FLAT32) || defined(FLAT16OUT)
+	push	SI
+	mov	nowPos(BP), SI
+	sub	rep0(BP), SI
+lzd13zflat:
+# ifdef FLAT32
+	lodsb	%ds:(SI)
+# else
+	lodsb	%es:(SI)
+# endif
+	call	outchar
+	loop	lzd13zflat
+	pop	SI
+#else
+	call	outcharDico 	// %bl = outStream[nowPos++] = outStream[nowPos - rep0]
 	loop	lzd13z
+#endif
+
 
 //     } /* char/string */
 //   }
@@ -684,13 +704,18 @@ lzdone:
 //   //RC_NORMALIZE;
 //   //*inSizeProcessed = (SizeT)(Buffer - inStream); *outSizeProcessed = nowPos;
 //   return LZMA_RESULT_OK;
+#if !defined(FLAT32) && !defined(FLAT16OUT)
 	call	Dico2ESDI	// set es & di (rep0 = 0)
+#else
+	movw	nowPos(BP), DI
+#endif
 	lea	ws2(BP), SP	// dealloc
 	ret	
 // }
 
 // al = outStream[nowPos - rep0];
 
+#if !defined(FLAT32) && !defined(FLAT16OUT)
 /*
  * output  es:di, al
  * scratch bh, cl, flags
@@ -707,7 +732,6 @@ DicoRep02ESDI:
  */
  
 Dico2ESDI:
-#if !defined(FLAT32) && !defined(FLAT16OUT)
 # ifdef ONLY8086
 	pushw	%ax
 	movw	nowPos(%bp), %bx
@@ -735,17 +759,6 @@ Dico2ESDIz:
 	shrl	$4, %ebx
 # endif
 	movw	%bx, %es
-#else
-	mov	nowPos(BP), DI
-	jnc	Dico2ESDIz
-	sub	rep0(BP), DI
-Dico2ESDIz:
-#endif
-#ifdef FLAT32
-	movb	(DI), %bl
-#else
-	movb	%es:(%di), %bl
-#endif
 	ret
 
 outcharDico:
@@ -773,6 +786,12 @@ outchar:
 	clc
 	call	Dico2ESDI
 	stosb
+#else
+outchar:
+	movw	nowPos(%bp), DI
+	stosb
+	movw	DI, nowPos(%bp)
+#endif
 	xchg	AX, BX		// previous byte
 
 //	int posState = (int)((nowPos) & posStateMask);
@@ -790,13 +809,13 @@ outchar:
 	andb	$((1 << PROP_LP) -1), posState2(BP)
 # endif
 #endif
-#ifdef ONLY8086
-	incw	nowPos(BP)
+#if !defined(FLAT32) && !defined(FLAT16OUT)
+	inc	nowPos(BP)
+# if defined(ONLY8086)
 	jnz	incnowPosDone
 	incw	nowPos+2(BP)
 incnowPosDone:
-#else
-	incl	nowPos(BP)
+# endif
 #endif
 	ret
 

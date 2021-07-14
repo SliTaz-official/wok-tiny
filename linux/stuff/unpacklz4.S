@@ -3,7 +3,8 @@
 	.code16
 	.org	0
 
-#define LZMA		0
+// LZ4 LZSA1 LZSA2 or LZMA
+#define COMPRESSION_LZ4
 #define HOLE		0x4000
 #define DS_OFS		0x0200
 
@@ -24,8 +25,12 @@ next:
 	popw	%bx
 	leaw	DS_OFS+start-next(%bx), %di
 	leaw	DS_OFS+packed-next(%bx,%si), %si
-#if LZMA
+#if  defined(COMPRESSION_LZMA)
 	call	unlzma
+#elif defined(COMPRESSION_LZSA2)
+	call	unlzsa2
+#elif defined(COMPRESSION_LZSA1)
+	call	unlzsa1
 #else
 
 #define ARCHIVE_MAGICNUMBER	0x184C2102
@@ -82,21 +87,47 @@ lz4string:
 	notw	%bx
 # endif
 #endif
-	xchgw	%ax, %si
+	pushw	%si
 #if NEGATIVE_OFFSETS || BYTE_RLE
 	leaw	(%bx,%di), %si
 #else
 	movw	%di, %si
 	subw	%bx, %si
 #endif
-	rep movsb %ds:(%si), %es:(%di)	// copy string
-	xchgw	%ax, %si
+#ifdef USE_MOVSW
+# if NEGATIVE_OFFSETS || BYTE_RLE
+	cmpw	$-2, %bx
+	jb	lzs4_move_words
+# else
+	cmpw	$2, %bx
+	ja	lzs4_move_words
+# endif
+	lodsw	%es:(%si)
+	je	lzs4_store_word	
+	movb	%al, %ah
+lzs4_store_word:
+	shrw	$1, %cx
+	rep stosw %es:(%di)
+	adcw	%cx, %cx
+	rep stosb %es:(%di)
+lzs4_move_words:
+	shrw	$1, %cx
+	rep movsw %es:(%si), %es:(%di)
+	adcw	%cx, %cx
+#endif
+	rep movsb %es:(%si), %es:(%di)	// copy string
+	popw	%si
 
 lz4chunk:				// uncompress chunk
 	lodsb				// get token
 	movb	%al, %bl
 	shrb	$4, %al
 	call	lz4len			// get literal length
+#ifdef USE_MOVSW
+	shrw	$1, %cx
+	rep movsw %ds:(%si), %es:(%di)
+	adcw	%cx, %cx
+#endif
 	rep movsb %ds:(%si), %es:(%di)	// copy literals
 	cmpw	%dx, %si
 	jb	lz4string
@@ -109,12 +140,18 @@ done:
 	//popaw
 	retf
 
-#if LZMA
+#if  defined(COMPRESSION_LZMA)
 #define FLAT16		1
 #define FLAT16OUT	1
 #define NO_LZMA_HEADER	1
 unlzma:
 #include "unlzma.S"
+#elif defined(COMPRESSION_LZSA2)
+unlzsa2:
+#include "unlzsa2.S"
+#elif defined(COMPRESSION_LZSA1)
+unlzsa1:
+#include "unlzsa1.S"
 #endif
 
 packed:

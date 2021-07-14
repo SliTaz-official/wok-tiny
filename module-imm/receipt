@@ -1,7 +1,7 @@
 # SliTaz package receipt.
 
 PACKAGE="module-imm"
-VERSION="2.6.14"
+VERSION="2.6.20"
 CATEGORY="base-system"
 GROUP="driver,scsi"
 SHORT_DESC="Kernel module for the Iomega VPI2 SCSI/parallel driver (new 100M+ floppy)"

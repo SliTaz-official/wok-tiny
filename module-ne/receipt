@@ -1,7 +1,7 @@
 # SliTaz package receipt.
 
 PACKAGE="module-ne"
-VERSION="2.6.14"
+VERSION="2.6.20"
 CATEGORY="base-system"
 GROUP="driver,ethernet"
 SHORT_DESC="Kernel module for the ne2000 driver"

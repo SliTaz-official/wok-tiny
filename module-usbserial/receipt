@@ -1,7 +1,7 @@
 # SliTaz package receipt.
 
 PACKAGE="module-usbserial"
-VERSION="2.6.14"
+VERSION="2.6.20"
 CATEGORY="base-system"
 GROUP="driver,usb"
 SHORT_DESC="Kernel module for the USB serial dongle"

@@ -1,7 +1,7 @@
 # SliTaz package receipt.
 
 PACKAGE="module-aha1740"
-VERSION="2.6.14"
+VERSION="2.6.20"
 CATEGORY="base-system"
 GROUP="driver,scsi"
 SHORT_DESC="Kernel module for the Adaptec 174x SCSI driver (EISA)"

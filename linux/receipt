@@ -1,7 +1,7 @@
 # SliTaz package receipt.
 
 PACKAGE="linux"
-VERSION="2.6.14"
+VERSION="2.6.20"
 CATEGORY="base-system"
 SHORT_DESC="The Linux kernel."
 TARGET="i486"
@@ -10,16 +10,14 @@ LICENSE="GPL2"
 TARBALL="$PACKAGE-$VERSION.tar.bz2"
 WEB_SITE="http://www.kernel.org/"
 WGET_URL="https://www.kernel.org/pub/linux/kernel/v${VERSION:0:3}/$TARBALL"
-WEB_SITE2="http://elinux.org/Linux_Tiny"
-PATCH="https://www.selenic.com/tiny/2.6.14-tiny1.patch.bz2"
 AUTO_SELECTION="always"
 
 DEPENDS=""
-BUILD_DEPENDS="slitaz-toolchain perl git lzma wget gcc2 upx advancecomp"
+BUILD_DEPENDS="slitaz-toolchain perl git lzma wget upx"
 INSTALL_DEPENDS="lz4 grep"
 
 case "$TARGET" in
-	i486) SUGGESTED="memtest ipxe plop";;  # bundle may install a boot menu
+	i486) SUGGESTED="memtest ipxe plop tfttest x86test";;  # bundle may install a boot menu
 esac
 
 S2bin()
@@ -39,21 +37,11 @@ rootfs()
 compile_rules()
 {
 	export CFLAGS="-march=i386 -Os -pipe -fomit-frame-pointer"
-	[ -s $SRC/$(basename $PATCH) ] ||
-	wget --no-check-certificate -O $SRC/$(basename $PATCH) $PATCH
-	bzcat $SRC/$(basename $PATCH) | patch -p1 &&
-	sed '/DEBUG/,/* kstrdup/d' < mm/slab.c > mm/kstrdup.c &&
-	echo 'obj-y += kstrdup.o' >> mm/Makefile
-	patch -p0 < $stuff/linux-2.6.14-unpack.u
-	patch -p0 < $stuff/jsclipboard.u
-	sed -i 's|\([>\.]\)val|\1u.val|;s|\([>\.]\)next|\1u.next|;s|\t};|\t} u;|' \
-		lib/inflate.c
-	sed -i 's|3.1024|11*256|' arch/i386/boot/compressed/misc.c
+	for i in $stuff/linux-$VERSION-*.u ; do
+		patch -p0 < $i
+	done
 	sed -i 's/O_CREAT/&|O_TRUNC/' init/initramfs.c
-	sed -i 's|hostname|echo slitaz|' scripts/mkcompile_h
-	which advdef 2> /dev/null && ! which upx 2> /dev/null &&
-	sed -i 's|gzip)|&\n	advdef -z4 $@|' \
-		usr/Makefile arch/i386/boot/compressed/Makefile
+	sed -i 's|hostname|echo tank|' scripts/mkcompile_h
 
 	mkdir $src/slitaz
 	cp $stuff/list_modules.sh $src/slitaz
@@ -63,16 +51,21 @@ compile_rules()
 	cp $stuff/pack .
 	sh ./pack --build
 
-	sed -i '/config %config:/{NNNps/config %config:/%config:/}' Makefile
+	sed -i '/config %config:/{NNNps/config %config:/%config:/}' Makefile &&
 	sed -i 's/^config %config:/config:/' Makefile
+	
+	#2.6.20
+	sed -i '/\/ %\/:/{NNps/\/ %\/:/%\/:/}' Makefile &&
+	sed -i 's/^\/ %\/:/\/:/' Makefile
+	sed -i 's|.*netinet/in|#include <limits.h>\n&|' scripts/mod/sumversion.c
 	
 	cp $stuff/linux-$VERSION-slitaz.config .config
 	rootfs
-	yes '' | make ARCH=i386 HOSTCC=gcc-2 config
-	make ARCH=i386 CC=gcc-2 HOSTCC=gcc-2 -j 4 bzImage
+	yes '' | make ARCH=i386 HOSTCC=gcc config
+	make ARCH=i386 CC=gcc HOSTCC=gcc -j 4 bzImage
 	
 	grep -q "CONFIG_MODULES=y" .config &&
-	make ARCH=i386 CC=gcc-2 HOSTCC=gcc-2 -j 4 modules &&
+	make ARCH=i386 CC=gcc HOSTCC=gcc -j 4 modules &&
 	make ARCH=i386 INSTALL_MOD_PATH=$DESTDIR -j 1 modules_install || true
 	S2bin bundle
 	cp $stuff/bundle .
@@ -85,8 +78,8 @@ compile_rules()
 	cp System.map System.map.386
 	cp $stuff/linux-$VERSION-slitaz.config.586 .config
 	rootfs
-	yes '' | make ARCH=i386 HOSTCC=gcc-2 config
-	make ARCH=i386 CC=gcc-2 HOSTCC=gcc-2 -j 4 bzImage
+	yes '' | make ARCH=i386 HOSTCC=gcc config
+	make ARCH=i386 CC=gcc HOSTCC=gcc -j 4 bzImage
 	which upx 2> /dev/null && upx --ultra-brute arch/i386/boot/bzImage
 }
 

@@ -1,6 +1,15 @@
 #!/bin/sh
 
 if [ "$1" = "--build" ]; then	#install-begin
+	while read type pack args; do
+		grep -q "#define COMPRESSION.*$type" unpacklz4.S || continue
+		sed -i "s/COMPRESSOR/$pack/;s/COMPRESSION/$pack $args/" $0
+	done <<EOT
+LZMA	lzma	-si -so $(sed '/^#define PROP_/!d;s|.*_|-|;s| *||;y/PBLPC/pblpc/' unlzma.S) | ddq bs=13 skip=1
+LZSA2	lzsa	-r -f 2
+LZSA1	lzsa	-r -f 1
+LZ4	lz4	-l -12 | ddq bs=4 skip=1
+EOT
 	uuencode -m - < unpacklz4.bin | sed -e '/^unpacklz4\.bin$/r/dev/stdin' \
 		-e '/^unpacklz4\.bin$/d' -i $0
 	cat helper.bin 2>/dev/null | uuencode -m - | sed -e \
@@ -40,7 +49,7 @@ EOT
 
 [ ! -s "$1" ] && echo "Usage: $0 bzImage" && exit 1
 
-if which lz4 > /dev/null ; then
+if which COMPRESSOR > /dev/null ; then
 
 # boot + head param
 param=$((514+$(get 0x201 $1 1)))
@@ -52,7 +61,7 @@ unpacklz4.bin
 EOT
 setupsz=$(get 0x1F1 $1 1)
 ddq if=$1 bs=1 skip=$param count=$(($setupsz*512-$param+512)) | \
-	lz4 -l -12 | ddq bs=4 skip=1 >> /tmp/setup$$
+	COMPRESSION >> /tmp/setup$$
 
 # version string
 word $(get 0x20E $1) >> /tmp/setup$$
