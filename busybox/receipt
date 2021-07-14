@@ -151,9 +151,9 @@ post_install()
 	ln -fs /proc/mounts $1/etc/mtab
 	cat >> $1/boot/mkrootfs.pre_exec <<EOT
 if [ -s modules ]; then
-	while read mod; do
+	tac modules | while read mod; do
 		sed -i "s/LOAD_MODULES=./&\$mod /" etc/rcS.conf
-	done < modules
+	done
 	grep ^LOAD_MODULES= etc/rcS.conf >> etc/packages.conf
 	cp etc/packages.conf boot/packages.conf
 	rm -f modules

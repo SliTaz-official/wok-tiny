@@ -200,5 +200,4 @@ post_install()
 		-e "s/^STATIC=.*/STATIC=\"$STATIC\"/" \
 		-e "s/^DHCP=.*/DHCP=\"$DHCP\"/" \
 		-e "s/^IP=.*/IP=\"$IP\"/" $1/etc/network.conf
-	[ -n "$HOSTNAME" ] && echo $HOSTNAME > $1/etc/hostname
 }
